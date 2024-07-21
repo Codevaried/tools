@@ -55,7 +55,8 @@ SelectFolder(*) {
 GenerateTree(FolderPath) {
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
     Command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" FolderPath "' | Out-File -FilePath tree_output.txt -Encoding utf8}"
-    RunWait(Command)
+    ; RunWait(Command)
+    RunWait(Command, , "Hide")
 
     ; Leer el archivo de salida y eliminar las dos primeras líneas
     FileTree := FileRead("tree_output.txt", "UTF-8")
