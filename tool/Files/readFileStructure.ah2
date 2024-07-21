@@ -32,6 +32,9 @@ CreateGui() {
     ; Configurar evento de arrastre
     MyGui.OnEvent("DropFiles", GuiDropFiles)
 
+    ; Configurar la captura de la tecla Enter
+    OnMessage(0x0100, WM_KEYDOWN)
+
     ; Mostrar la GUI centrada
     MyGui.Show("AutoSize Center")
 }
@@ -43,9 +46,24 @@ SelectFolder(*) {
     global FolderEdit
     FolderPath := DirSelect()
     if (FolderPath) {
-        FolderEdit.Value := FolderPath
+        FolderEdit.Value := NormalizePath(FolderPath)
         GenerateTree(FolderPath)
     }
+}
+
+/**
+ * Función para normalizar una ruta de archivo.
+ * Reemplaza todas las barras "/" con "\" y elimina cualquier barra inicial o final.
+ * @param {string} Path - La ruta a normalizar.
+ * @return {string} - La ruta normalizada.
+ */
+NormalizePath(Path) {
+    Path := StrReplace(Path, "/", "\")
+    if (SubStr(Path, 1, 1) = "\" or SubStr(Path, 1, 1) = "/")
+        Path := SubStr(Path, 2)
+    if (SubStr(Path, -1) = "\" or SubStr(Path, -1) = "/")
+        Path := SubStr(Path, 1, -1)
+    return Path
 }
 
 /**
@@ -53,10 +71,22 @@ SelectFolder(*) {
  * @param {string} FolderPath - La ruta de la carpeta.
  */
 GenerateTree(FolderPath) {
+    ; Normalizar la ruta
+    FolderPath := NormalizePath(FolderPath)
+
+    ; Validar que la ruta es válida
+    if (!FileExist(FolderPath) or FileExist(FolderPath) != "D") {
+        MsgBox("Por favor, ingrese una ruta de carpeta válida.")
+        return
+    }
+
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
     Command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" FolderPath "' | Out-File -FilePath tree_output.tree -Encoding utf8}"
-    ; RunWait(Command)
     RunWait(Command, , "Hide")
+    if (A_LastError) {
+        MsgBox("Error al generar el árbol de archivos. Por favor, intente nuevamente.")
+        return
+    }
 
     ; Leer el archivo de salida y eliminar las dos primeras líneas
     FileTree := FileRead("tree_output.tree", "UTF-8")
@@ -93,10 +123,26 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
     global FolderEdit
     FolderPath := FileArray[1]
     if (FileExist(FolderPath) = "D") {
-        FolderEdit.Value := FolderPath
+        FolderEdit.Value := NormalizePath(FolderPath)
         GenerateTree(FolderPath)
     } else {
         MsgBox("Por favor, arrastre una carpeta válida.")
+    }
+}
+
+/**
+ * Función para manejar el evento de tecla presionada.
+ * @param {WPARAM} wParam - El código de la tecla presionada.
+ * @param {LPARAM} lParam - Información adicional sobre la tecla presionada.
+ * @param {MSG} msg - El mensaje de la tecla presionada.
+ * @param {HWND} hwnd - El identificador de la ventana.
+ */
+WM_KEYDOWN(wParam, lParam, msg, hwnd) {
+    global FolderEdit
+    if (wParam = 0x0D) { ; Código de la tecla Enter
+        if (WinActive("Generador de Árbol de Archivos")) {
+            GenerateTree(FolderEdit.Value)
+        }
     }
 }
 

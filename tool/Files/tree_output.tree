@@ -1,6 +1,12 @@
 ﻿### Estructura de Archivos:
-1
-├───a
-│       a.txt
-│       
-└───b
+Files
+│   readFileStructure.ah2
+│   tree_output.tree
+│   
+└───1
+    ├───a
+    │       a.txt
+    │       
+    └───b
+            b.txt
+            
