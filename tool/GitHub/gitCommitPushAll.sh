@@ -88,7 +88,7 @@ fi
 # Añadir cambios al índice, hacer commit y push
 printf "${PURPLE}git add .${NC}\n"
 if git add . && printf "${PURPLE}git commit -m \"%s\"${NC}\n" "$commit_message" && git commit -m "$commit_message" && printf "${PURPLE}git push origin %s${NC}\n" "$default_branch" && git push origin "$default_branch"; then
-    printf "${GREEN}Cambios guardados y enviados exitosamente.${NC}\n"
+    printf "${GREEN}Cambios guardados y enviados exitosamente 💹${NC}\n"
     if total_commits=$(git rev-list --all --count); then
         printf "${GREEN}Total de commits en el repositorio: \033[1m%s\033[0m${NC}\n" "$total_commits"
     else
