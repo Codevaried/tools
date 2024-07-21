@@ -54,12 +54,12 @@ SelectFolder(*) {
  */
 GenerateTree(FolderPath) {
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    Command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" FolderPath "' | Out-File -FilePath tree_output.txt -Encoding utf8}"
+    Command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" FolderPath "' | Out-File -FilePath tree_output.tree -Encoding utf8}"
     ; RunWait(Command)
     RunWait(Command, , "Hide")
 
     ; Leer el archivo de salida y eliminar las dos primeras líneas
-    FileTree := FileRead("tree_output.txt", "UTF-8")
+    FileTree := FileRead("tree_output.tree", "UTF-8")
     FileTreeArray := StrSplit(FileTree, "`n")
     ; Eliminar las dos primeras líneas
     FileTreeArray.RemoveAt(1)
@@ -76,11 +76,11 @@ GenerateTree(FolderPath) {
         }
     }
     ; Reescribir el archivo con las modificaciones
-    FileDelete("tree_output.txt")
-    FileAppend(FileTreeNew, "tree_output.txt", "UTF-8")
+    FileDelete("tree_output.tree")
+    FileAppend(FileTreeNew, "tree_output.tree", "UTF-8")
 
     ; Mostrar mensaje de confirmación
-    MsgBox("Árbol de archivos guardado en tree_output.txt")
+    MsgBox("Árbol de archivos guardado en tree_output.tree")
 }
 
 /**
