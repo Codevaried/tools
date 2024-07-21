@@ -9,7 +9,7 @@ Documentación para el script `gitCommitPushAll.sh`
 
 ### Descripción
 
-Este script en Bash automatiza el proceso de añadir cambios al índice de git, realizar un commit y hacer push a la rama principal (`main` o `master`) del repositorio. Está diseñado para ser ejecutado desde cualquier subdirectorio dentro del repositorio, y manejará automáticamente el cambio al directorio principal del repositorio. El script se puede ejecutar tanto desde la terminal (recomendado) como desde los archivos de Windows.
+Este script en Bash automatiza el proceso de añadir cambios al índice de git, realizar un commit y hacer push a la rama principal (`main` o `master`) del repositorio. Está diseñado para ser ejecutado desde cualquier subdirectorio dentro del repositorio, y manejará automáticamente el cambio al directorio principal del repositorio. El script se puede ejecutar tanto desde la terminal (recomendado) como desde cualquier otro entorno.
 
 ### Uso
 
