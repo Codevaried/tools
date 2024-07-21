@@ -1,26 +1,34 @@
 #!/bin/bash
 
-# Definición de colores
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-NC='\033[0m' # Sin color
+#* Colores
+GREEN='\033[0;32m'  #? Exito
+RED='\033[0;31m'    #? Error
+YELLOW='\033[1;33m' #? Aviso
+PURPLE='\033[0;35m' #? Informacion git
+BLUE='\033[0;34m'   #? Input del Usuario
+NC='\033[0m'        #; Sin color
 
-# Función para mostrar mensajes en color
+#* Función para pausar la ejecución si se ejecuta fuera de la terminal
+pause_if_not_terminal() {
+    if [[ ! -t 1 ]]; then
+        printf "${BLUE}Presione Enter para continuar...${NC}"
+        read -r
+    fi
+}
+
+#* Función para mostrar mensajes en color
 echo_color() {
     printf "%b%s%b\n" "${2}" "${1}" "${NC}"
 }
 
-# Obtener la fecha y hora actual
+#* Obtener la fecha y hora actual
 current_datetime() {
     local datetime
     datetime=$(date '+%Y-%m-%d %H:%M:%S')
     printf "%s" "$datetime"
 }
 
-# Obtener el nombre del repositorio a partir de la URL
+#* Obtener el nombre del repositorio a partir de la URL
 get_repo_name() {
     local repo_url repo_name
     repo_url=$(git config --get remote.origin.url)
@@ -32,7 +40,7 @@ get_repo_name() {
     printf "%s" "$repo_name"
 }
 
-# Solicitar la URL del repositorio remoto
+#* Solicitar la URL del repositorio remoto
 prompt_repo_url() {
     local remote_url
     read -p "$(echo_color 'Introduce la URL del repositorio remoto: ' "${BLUE}")" remote_url
@@ -43,14 +51,14 @@ prompt_repo_url() {
     printf "%s" "$remote_url"
 }
 
-# Solicitar la ruta del repositorio (opcional)
+#* Solicitar la ruta del repositorio (opcional)
 prompt_repo_path() {
     local repo_path
     read -p "$(echo_color 'Introduce la ruta donde se clonará el repositorio (Opcional, por defecto es la ruta actual): ' "${BLUE}")" repo_path
     printf "%s" "$repo_path"
 }
 
-# Clonar el repositorio
+#* Clonar el repositorio
 clone_repo() {
     local remote_url="$1"
     local repo_path="$2"
@@ -61,7 +69,7 @@ clone_repo() {
     fi
 }
 
-# Verificar si la rama principal es 'main' o 'master'
+#* Verificar si la rama principal es 'main' o 'master'
 get_default_branch() {
     local default_branch
     default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
@@ -72,7 +80,7 @@ get_default_branch() {
     printf "%s" "$default_branch"
 }
 
-# Limpiar el repositorio
+#* Limpiar el repositorio
 clean_repo() {
 
     # Eliminar todas las ramas excepto la principal
@@ -115,7 +123,7 @@ clean_repo() {
     rm -rf .git
 }
 
-# Eliminar el repositorio si existe
+#* Eliminar el repositorio si existe
 remove_existing_repo() {
     local repo_path="$1"
     if [[ -d "$repo_path" ]]; then
@@ -124,7 +132,7 @@ remove_existing_repo() {
     fi
 }
 
-# Crear la rama main, crear README.md y hacer commit inicial
+#* Crear la rama main, crear README.md y hacer commit inicial
 initialize_main_branch() {
     local repo_name="$1"
 
@@ -153,7 +161,7 @@ initialize_main_branch() {
     fi
 }
 
-# Procesar y crear ramas iniciales
+#* Procesar y crear ramas iniciales
 process_branches() {
     local branches branch
 
@@ -207,22 +215,28 @@ process_branches() {
     IFS=' ' read -r -a branches <<<"$branches"
 
     for branch in "${branches[@]}"; do
+        echo_color "Creando y cambiando a la rama '$branch' desde la rama main..." "${PURPLE}"
+        if ! git checkout -b "$branch" main; then
+            echo_color "Error al crear y cambiar a la rama '$branch' desde la rama main." "${RED}" >&2
+            return 1
+        fi
+
         create_switch_branch "$branch" || return 1
         create_readme_branch "$branch" || return 1
         commit_readme "$branch" || return 1
         push_branch "$branch" || return 1
-    done
 
-    echo_color 'Volviendo a la rama main...' "${PURPLE}"
-    if ! git checkout main; then
-        echo_color 'Error al volver a la rama main.' "${RED}" >&2
-        return 1
-    fi
+        echo_color 'Volviendo a la rama main...' "${PURPLE}"
+        if ! git checkout main; then
+            echo_color 'Error al volver a la rama main.' "${RED}" >&2
+            return 1
+        fi
+    done
 
     return 0
 }
 
-# Inicializar el repositorio
+#* Inicializar el repositorio
 initialize_repo() {
     local remote_url repo_path repo_name
 
@@ -273,10 +287,9 @@ initialize_repo() {
         echo_color 'Las ramas personalizadas han sido creadas y enviadas al remoto.' "${GREEN}"
         ;;
     esac
-
 }
 
-# Reiniciar el repositorio de fábrica
+#* Reiniciar el repositorio de fábrica
 reset_repo() {
     local remote_url repo_path default_branch repo_name
 
@@ -333,7 +346,7 @@ reset_repo() {
     esac
 }
 
-# Función principal
+#* Función principal
 main() {
     local choice
 
@@ -360,3 +373,6 @@ main() {
 }
 
 main "$@"
+
+# Pausar si no se ejecuta en una terminal
+pause_if_not_terminal
