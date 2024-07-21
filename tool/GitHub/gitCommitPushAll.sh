@@ -11,10 +11,13 @@ NC='\033[0m'        #; Sin color
 
 #* Función para pausar la ejecución si se ejecuta fuera de la terminal
 pause_if_not_terminal() {
-    if [[ ! -t 1 ]]; then
-        printf "${BLUE}Presione Enter para continuar...${NC}\n"
+    case "$-" in
+    *i*)
+        printf "${BLUE}Presione Enter para salir...${NC}\n"
         read -r
-    fi
+        ;;
+    *) ;; # No es una shell interactiva, no hacer nada
+    esac
 }
 
 #* Confirmar el inicio del proceso
