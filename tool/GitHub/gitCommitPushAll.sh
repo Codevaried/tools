@@ -6,7 +6,16 @@ GREEN='\033[0;32m'  #? Exito
 RED='\033[0;31m'    #? Error
 YELLOW='\033[1;33m' #? Aviso
 PURPLE='\033[0;35m' #? Informacion git
+BLUE='\033[0;34m'   #? Input del Usuario
 NC='\033[0m'        #; Sin color
+
+#* Función para pausar la ejecución si se ejecuta fuera de la terminal
+pause_if_not_terminal() {
+    if [[ ! -t 1 ]]; then
+        printf "${BLUE}Presione Enter para continuar...${NC}"
+        read -r
+    fi
+}
 
 # Guardar la ruta actual
 current_dir=$(pwd)
@@ -14,6 +23,7 @@ current_dir=$(pwd)
 # Obtener la ruta principal del repositorio
 if ! repo_dir=$(git rev-parse --show-toplevel); then
     printf "${RED}No se pudo obtener la ruta principal del repositorio.${NC}\n" >&2
+    pause_if_not_terminal
     exit 1
 fi
 
@@ -37,6 +47,7 @@ commit_message=${1:-"$(basename "$repo_dir") automatic update from ($script_name
 # Cambiar al directorio del repositorio
 cd "$repo_dir" || {
     printf "${RED}Error al cambiar al directorio del repositorio.${NC}\n" >&2
+    pause_if_not_terminal
     exit 1
 }
 
@@ -44,6 +55,7 @@ cd "$repo_dir" || {
 if ! default_branch=$(get_default_branch); then
     printf "${RED}Error al obtener la rama principal.${NC}\n" >&2
     cd "$current_dir"
+    pause_if_not_terminal
     exit 1
 fi
 
@@ -63,5 +75,9 @@ fi
 # Volver a la ruta anterior
 cd "$current_dir" || {
     printf "${RED}Error al volver a la ruta anterior.${NC}\n" >&2
+    pause_if_not_terminal
     exit 1
 }
+
+# Pausa si no se ejecuta en una terminal
+pause_if_not_terminal

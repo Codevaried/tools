@@ -8,7 +8,7 @@ Documentación para el script `gitCommitPushAll.sh`
 
 ### Descripción
 
-Este script en Bash automatiza el proceso de añadir cambios al índice de git, realizar un commit y hacer push a la rama principal (`main` o `master`) del repositorio. Está diseñado para ser ejecutado desde cualquier subdirectorio dentro del repositorio, y manejará automáticamente el cambio al directorio principal del repositorio.
+Este script en Bash automatiza el proceso de añadir cambios al índice de git, realizar un commit y hacer push a la rama principal (`main` o `master`) del repositorio. Está diseñado para ser ejecutado desde cualquier subdirectorio dentro del repositorio, y manejará automáticamente el cambio al directorio principal del repositorio. El script se puede ejecutar tanto desde la terminal (recomendado) como desde los archivos de Windows.
 
 ### Uso
 
@@ -28,6 +28,7 @@ El script utiliza colores para proporcionar retroalimentación visual sobre el e
 - **Rojo (`$RED`)**: Error.
 - **Amarillo (`$YELLOW`)**: Aviso.
 - **Púrpura (`$PURPLE`)**: Información de git.
+- **Azul (`$BLUE`)**: Input del usuario.
 - **Sin color (`$NC`)**: Restablecer al color por defecto del terminal.
 
 ### Ejemplo de Ejecución
@@ -66,4 +67,5 @@ Si no se proporciona un mensaje de commit, el script utilizará uno por defecto 
 > [!NOTE]  
 > Reconsidere la posibilidad de añadir el script al archivo `.gitignore` si no desea que se envíe al repositorio remoto. A pesar de que el script necesita estar dentro de la carpeta del repositorio, puede excluirse del control de versiones para evitar que se incluya en los commits y pushs.
 
----
+> [!TIP]
+> El script se puede ejecutar tanto desde la terminal (recomendado) como desde los archivos de Windows. Si se ejecuta desde Windows, asegúrese de que el entorno esté configurado correctamente para interpretar scripts de Bash.
