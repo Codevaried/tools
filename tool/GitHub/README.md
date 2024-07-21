@@ -3,6 +3,19 @@
 1. [gitCommitPushAll.sh](#gitCommitPushAll)
 2. [gitRepoTool.sh](#gitRepoTool)
 
+## Detalles del los Scripts
+
+#### Colores
+
+Los scripts utilizan colores para proporcionar retroalimentación visual sobre el estado de las operaciones:
+
+- **🟢 Verde (`$GREEN`)**: Éxito.
+- **🔴 Rojo (`$RED`)**: Error.
+- **🟡 Amarillo (`$YELLOW`)**: Aviso.
+- **🟣 Púrpura (`$PURPLE`)**: Información adicional.
+- **🔵 Azul (`$BLUE`)**: Input del usuario.
+- **⚪ Sin color (`$NC`)**: Restablecer al color por defecto del terminal.
+
 ## gitCommitPushAll
 
 Documentación para el script `gitCommitPushAll.sh`
@@ -18,19 +31,6 @@ Este script en Bash automatiza el proceso de añadir cambios al índice de git, 
 ```
 
 - `mensaje_del_commit` (opcional): El mensaje que se usará para el commit. Si no se proporciona, se utilizará un mensaje por defecto que incluye el nombre del repositorio y una indicación de que es una actualización automática.
-
-### Detalles del Script
-
-#### Colores
-
-El script utiliza colores para proporcionar retroalimentación visual sobre el estado de las operaciones:
-
-- **Verde (`$GREEN`)**: Éxito.
-- **Rojo (`$RED`)**: Error.
-- **Amarillo (`$YELLOW`)**: Aviso.
-- **Púrpura (`$PURPLE`)**: Información de git.
-- **Azul (`$BLUE`)**: Input del usuario.
-- **Sin color (`$NC`)**: Restablecer al color por defecto del terminal.
 
 #### Confirmar el inicio del proceso
 
