@@ -2,11 +2,11 @@
 #? Script para guardar los cambios y hacer un commit y un push desde la carpeta principal del repositorio
 
 #* Colores
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-PURPLE='\033[0;35m'
-NC='\033[0m' # Sin color
+GREEN='\033[0;32m'  #? Exito
+RED='\033[0;31m'    #? Error
+YELLOW='\033[1;33m' #? Aviso
+PURPLE='\033[0;35m' #? Informacion git
+NC='\033[0m'        #; Sin color
 
 # Guardar la ruta actual
 current_dir=$(pwd)
@@ -28,8 +28,11 @@ get_default_branch() {
     printf "%s" "$default_branch"
 }
 
+# Obtener el nombre del propio script
+script_name=$(basename "$0")
+
 #* Mensaje por defecto del commit
-commit_message=${1:-"$(basename "$repo_dir") automatic update from (autoSaveAndPush.sh)"}
+commit_message=${1:-"$(basename "$repo_dir") automatic update from ($script_name)"}
 
 # Cambiar al directorio del repositorio
 cd "$repo_dir" || {
