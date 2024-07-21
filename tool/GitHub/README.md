@@ -1,10 +1,10 @@
 ## Índice de Herramientas
 
-1. [gitAutoUpdate.sh](#gitAutoUpdate)
+1. [gitCommitPushAll.sh](#gitCommitPushAll)
 
-## gitAutoUpdate
+## gitCommitPushAll
 
-Documentación para el script `gitAutoUpdate.sh`
+Documentación para el script `gitCommitPushAll.sh`
 
 ### Descripción
 
@@ -13,7 +13,7 @@ Este script en Bash automatiza el proceso de añadir cambios al índice de git, 
 ### Uso
 
 ```bash
-./gitAutoUpdate.sh [mensaje_del_commit]
+./gitCommitPushAll.sh [mensaje_del_commit]
 ```
 
 - `mensaje_del_commit` (opcional): El mensaje que se usará para el commit. Si no se proporciona, se utilizará un mensaje por defecto que incluye el nombre del repositorio y una indicación de que es una actualización automática.
@@ -33,13 +33,13 @@ El script utiliza colores para proporcionar retroalimentación visual sobre el e
 ### Ejemplo de Ejecución
 
 ```bash
-./gitAutoUpdate.sh "Actualización de documentación y refactorización de código"
+./gitCommitPushAll.sh "Actualización de documentación y refactorización de código"
 ```
 
 Si no se proporciona un mensaje de commit, el script utilizará uno por defecto como el siguiente:
 
 ```
-<nombre_del_repositorio> automatic update from (gitAutoUpdate.sh)
+<nombre_del_repositorio> automatic update from (gitCommitPushAll.sh)
 ```
 
 ### Notas
@@ -48,7 +48,7 @@ Si no se proporciona un mensaje de commit, el script utilizará uno por defecto 
 > Asegúrese de tener permisos de ejecución para el script:
 >
 > ```bash
-> chmod +x gitAutoUpdate.sh
+> chmod +x gitCommitPushAll.sh
 > ```
 
 > [!TIP]
