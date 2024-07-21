@@ -59,11 +59,26 @@ SelectFolder(*) {
  */
 NormalizePath(Path) {
     Path := StrReplace(Path, "/", "\")
-    if (SubStr(Path, 1, 1) = "\" or SubStr(Path, 1, 1) = "/")
+    while (SubStr(Path, 1, 1) = "\" or SubStr(Path, 1, 1) = "/") {
         Path := SubStr(Path, 2)
-    if (SubStr(Path, -1) = "\" or SubStr(Path, -1) = "/")
+    }
+    while (SubStr(Path, -1) = "\" or SubStr(Path, -1) = "/") {
         Path := SubStr(Path, 1, -1)
+    }
     return Path
+}
+
+/**
+ * Función para obtener el nombre de la carpeta principal de una ruta.
+ * @param {string} FolderPath - La ruta de la carpeta.
+ * @return {string} - El nombre de la carpeta principal.
+ */
+GetMainFolderName(FolderPath) {
+    originalDir := A_WorkingDir
+    SetWorkingDir(FolderPath)
+    mainFolder := RegExReplace(A_WorkingDir, "^.*\\")
+    SetWorkingDir(originalDir)
+    return mainFolder
 }
 
 /**
@@ -75,7 +90,7 @@ GenerateTree(FolderPath) {
     FolderPath := NormalizePath(FolderPath)
 
     ; Validar que la ruta es válida
-    if (!FileExist(FolderPath) or FileExist(FolderPath) != "D") {
+    if (!FileExist(FolderPath) or FileExist(FolderPath) != "D" and FileExist(FolderPath) != "AD" and FileExist(FolderPath) != "RD") {
         MsgBox("Por favor, ingrese una ruta de carpeta válida.")
         return
     }
@@ -94,8 +109,10 @@ GenerateTree(FolderPath) {
     ; Eliminar las dos primeras líneas
     FileTreeArray.RemoveAt(1)
     FileTreeArray.RemoveAt(1)
+
     ; Obtener el nombre de la carpeta principal
-    FolderName := StrSplit(FolderPath, "\").Pop()
+    FolderName := GetMainFolderName(FolderPath)
+
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     FileTreeArray[1] := FolderName
     ; Filtrar líneas vacías y eliminar espacios en blanco y tabulaciones
