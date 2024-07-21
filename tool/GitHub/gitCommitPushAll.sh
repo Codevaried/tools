@@ -17,6 +17,26 @@ pause_if_not_terminal() {
     fi
 }
 
+#* Confirmar el inicio del proceso
+confirm_proceed() {
+    local message="$1"
+    local description="$2"
+    printf "${YELLOW}%s${NC}\n" "$message"
+    printf "${PURPLE}%b${NC}\n" "$description"
+    while true; do
+        read -rp "$(printf "${BLUE}¿Desea proceder con la ejecución del script? (s/n): ${NC}")" choice
+        case "$choice" in
+        s | S) break ;;
+        n | N)
+            printf "${YELLOW}Ejecución del script cancelada.${NC}\n"
+            pause_if_not_terminal
+            exit 0
+            ;;
+        *) printf "${RED}Por favor, responda 's' para sí o 'n' para no.${NC}\n" ;;
+        esac
+    done
+}
+
 # Guardar la ruta actual
 current_dir=$(pwd)
 
@@ -41,8 +61,14 @@ get_default_branch() {
 # Obtener el nombre del propio script
 script_name=$(basename "$0")
 
+# Obtener el nombre del repositorio remoto
+repo_name=$(basename -s .git "$(git config --get remote.origin.url)")
+
 #* Mensaje por defecto del commit
 commit_message=${1:-"$(basename "$repo_dir") automatic update from ($script_name)"}
+
+# Llamar a la función para confirmar la ejecución
+confirm_proceed "Iniciando el proceso de guardado, commit y push de cambios." "Este script guardará los cambios actuales, hará un commit y los enviará al repositorio remoto.\ncommit: '$commit_message'\nrepositorio remoto: '$repo_name'"
 
 # Cambiar al directorio del repositorio
 cd "$repo_dir" || {

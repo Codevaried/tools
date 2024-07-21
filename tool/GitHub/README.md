@@ -32,6 +32,19 @@ El script utiliza colores para proporcionar retroalimentación visual sobre el e
 - **Azul (`$BLUE`)**: Input del usuario.
 - **Sin color (`$NC`)**: Restablecer al color por defecto del terminal.
 
+#### Confirmar el inicio del proceso
+
+Antes de iniciar el proceso, el script solicitará confirmación al usuario para proceder. Se mostrará un mensaje con una descripción del proceso y se pedirá al usuario que confirme si desea continuar:
+
+```bash
+Iniciando el proceso de guardado, commit y push de cambios.
+Este script guardará los cambios actuales, hará un commit y los enviará al repositorio remoto.
+commit: '<mensaje_del_commit>'
+repositorio remoto: '<nombre_del_repositorio>'
+
+¿Desea proceder con la ejecución del script? (s/n):
+```
+
 ### Ejemplo de Ejecución
 
 ```bash
