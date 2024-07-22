@@ -1,0 +1,13 @@
+﻿ Archivo '1.txt': 
+ Archivo 1
+
+  Archivo 'a\a.txt': 
+ Archivo a
+
+  Archivo 'b\b.txt': 
+ Archivo b
+
+  Archivo 'd\d.txt': 
+ Archivo d
+
+ 

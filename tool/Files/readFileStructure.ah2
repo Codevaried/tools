@@ -61,6 +61,7 @@ SelectFolder(*) {
         FolderEdit.Value := NormalizePath(FolderPath)
         if (FolderEdit.Value) { ; Verificar si la ruta es válida
             CheckAndGenerate_DirectoryTree(FolderEdit.Value)
+            CheckAndGenerate_FilesContents(FolderEdit.Value)
         }
     }
 }
@@ -131,7 +132,6 @@ CheckAndGenerate_DirectoryTree(FolderPath) {
     }
 }
 
-
 /**
  * Verifica si el checkbox de Files Contents está activado y llama a GenerateFilesContents si es así.
  * @param {string} FolderPath - La ruta de la carpeta.
@@ -197,6 +197,99 @@ GenerateDirectoryTree(FolderPath) {
 }
 
 /**
+ * Verifica si un valor está en una lista.
+ * @param {Array} list - La lista a verificar.
+ * @param {string} value - El valor a buscar.
+ * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
+ */
+HasValue(list, value) {
+    for item in list {
+        if (item = value)
+            return true
+    }
+    return false
+}
+
+/**
+ * Lee las extensiones permitidas desde un archivo.
+ * @param {string} FilePath - La ruta del archivo que contiene las extensiones permitidas.
+ * @return {Array} - Una lista de extensiones permitidas.
+ */
+LoadAllowedExtensions(FilePath) {
+    if !FileExist(FilePath) {
+        MsgBox("El archivo de extensiones permitidas no existe.")
+        return []
+    }
+    Extensions := []
+    Loop Read, FilePath {
+        Extension := Trim(A_LoopReadLine)
+        if (Extension != "" && SubStr(Extension, 1, 1) != "#") ; Ignorar comentarios y líneas vacías
+            Extensions.Push(Extension)
+    }
+    return Extensions
+}
+
+/**
+ * Genera el contenido de los archivos de la carpeta seleccionada.
+ * @param {string} FolderPath - La ruta de la carpeta.
+ */
+GenerateFilesContents(FolderPath) {
+    global isGenerating
+    isGenerating := true
+
+    ; Normalizar la ruta
+    FolderPath := NormalizePath(FolderPath)
+    if (!FolderPath) {
+        isGenerating := false
+        return
+    }
+
+    FileList := ""
+    AllowedExtensions := LoadAllowedExtensions("AllowedExtensions.txt") ; Cargar extensiones permitidas desde archivo
+    if (AllowedExtensions.Length = 0) {
+        MsgBox("No se encontraron extensiones permitidas.")
+        isGenerating := false
+        return
+    }
+
+    MainFolder := GetMainFolderName(FolderPath)
+    Loop Files, FolderPath "\*.*", "R" {
+        ; Obtener la ruta relativa al directorio principal
+        RelativePath := StrReplace(A_LoopFileFullPath, FolderPath "\")
+        ; Obtener la extensión del archivo
+        FileExt := StrLower(StrSplit(A_LoopFileFullPath, ".").Pop())
+        ; Verificar si la extensión está en la lista de archivos permitidos
+        if !HasValue(AllowedExtensions, FileExt) {
+            continue ; Omitir archivos no permitidos
+        }
+
+        try {
+            FileContents := FileRead(A_LoopFileFullPath, "UTF-8")
+            ErrorFileContents := false
+        } catch {
+            FileContents := ""
+            ErrorFileContents := true
+        }
+
+        if (ErrorFileContents)
+            FileList .= "Archivo '" RelativePath "'[Error Lectura del archivo]`n`n "
+        else
+            FileList .= " Archivo '" RelativePath "': `n " FileContents "`n`n "
+    }
+
+    ; Escribir los contenidos en un archivo de salida
+    if FileExist("files_contents_output.txt")
+        FileDelete("files_contents_output.txt")
+    FileAppend(FileList, "files_contents_output.txt", "UTF-8")
+
+    ; Mostrar mensaje de confirmación
+    MsgBox("Contenido de los archivos guardado en files_contents_output.txt")
+
+    isGenerating := false
+}
+
+
+/**
  * Maneja el evento de arrastre de archivos a la GUI.
  * @param {object} thisGui - La GUI donde se soltaron los archivos.
  * @param {object} Ctrl - El control donde se soltaron los archivos.
@@ -210,6 +303,7 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
     if (FolderPath) { ; Verificar si la ruta es válida
         FolderEdit.Value := FolderPath
         CheckAndGenerate_DirectoryTree(FolderEdit.Value)
+        CheckAndGenerate_FilesContents(FolderEdit.Value)
     }
 }
 
@@ -227,6 +321,7 @@ WM_KEYDOWN(wParam, lParam, msg, hwnd) {
     if (wParam = 0x0D) { ; Código de la tecla Enter
         if (WinActive("Generador de Árbol de Archivos")) {
             CheckAndGenerate_DirectoryTree(FolderEdit.Value)
+            CheckAndGenerate_FilesContents(FolderEdit.Value)
         }
     }
 }
