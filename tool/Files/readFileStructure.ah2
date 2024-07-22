@@ -49,7 +49,6 @@ CreateGui() {
     MyGui.Show("AutoSize Center")
 }
 
-
 /**
  * Selecciona una carpeta mediante un diálogo.
  */
@@ -60,7 +59,9 @@ SelectFolder(*) {
     FolderPath := DirSelect()
     if (FolderPath) {
         FolderEdit.Value := NormalizePath(FolderPath)
-        GenerateTree(FolderPath)
+        if (FolderEdit.Value) { ; Verificar si la ruta es válida
+            CheckAndGenerate_DirectoryTree(FolderEdit.Value)
+        }
     }
 }
 
@@ -76,6 +77,19 @@ NormalizePath(Path) {
     }
     while (SubStr(Path, -1) = "\" or SubStr(Path, -1) = "/") {
         Path := SubStr(Path, 1, -1)
+    }
+    return ValidateFolder(Path)
+}
+
+/**
+ * Valida si una ruta es una carpeta válida.
+ * @param {string} Path - La ruta a validar.
+ * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
+ */
+ValidateFolder(Path) {
+    if (!FileExist(Path) or FileExist(Path) != "D" and FileExist(Path) != "AD" and FileExist(Path) != "RD") {
+        MsgBox("Por favor, ingrese una ruta de carpeta válida.")
+        return false
     }
     return Path
 }
@@ -107,19 +121,39 @@ CheckIfGenerating() {
 }
 
 /**
+ * Verifica si el checkbox de Directory Tree está activado y llama a GenerateDirectoryTree si es así.
+ * @param {string} FolderPath - La ruta de la carpeta.
+ */
+CheckAndGenerate_DirectoryTree(FolderPath) {
+    global DirectoryTreeCheckbox
+    if (DirectoryTreeCheckbox.Value) {
+        GenerateDirectoryTree(FolderPath)
+    }
+}
+
+
+/**
+ * Verifica si el checkbox de Files Contents está activado y llama a GenerateFilesContents si es así.
+ * @param {string} FolderPath - La ruta de la carpeta.
+ */
+CheckAndGenerate_FilesContents(FolderPath) {
+    global FileContentsCheckbox
+    if (FileContentsCheckbox.Value) {
+        GenerateFilesContents(FolderPath)
+    }
+}
+
+/**
  * Genera el árbol de archivos de la carpeta seleccionada.
  * @param {string} FolderPath - La ruta de la carpeta.
  */
-GenerateTree(FolderPath) {
+GenerateDirectoryTree(FolderPath) {
     global isGenerating
     isGenerating := true
 
     ; Normalizar la ruta
     FolderPath := NormalizePath(FolderPath)
-
-    ; Validar que la ruta es válida
-    if (!FileExist(FolderPath) or FileExist(FolderPath) != "D" and FileExist(FolderPath) != "AD" and FileExist(FolderPath) != "RD") {
-        MsgBox("Por favor, ingrese una ruta de carpeta válida.")
+    if (!FolderPath) {
         isGenerating := false
         return
     }
@@ -172,12 +206,10 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
     global FolderEdit
     if (CheckIfGenerating())
         return
-    FolderPath := FileArray[1]
-    if (FileExist(FolderPath) = "D") {
-        FolderEdit.Value := NormalizePath(FolderPath)
-        GenerateTree(FolderPath)
-    } else {
-        MsgBox("Por favor, arrastre una carpeta válida.")
+    FolderPath := NormalizePath(FileArray[1])
+    if (FolderPath) { ; Verificar si la ruta es válida
+        FolderEdit.Value := FolderPath
+        CheckAndGenerate_DirectoryTree(FolderEdit.Value)
     }
 }
 
@@ -194,7 +226,7 @@ WM_KEYDOWN(wParam, lParam, msg, hwnd) {
         return
     if (wParam = 0x0D) { ; Código de la tecla Enter
         if (WinActive("Generador de Árbol de Archivos")) {
-            GenerateTree(FolderEdit.Value)
+            CheckAndGenerate_DirectoryTree(FolderEdit.Value)
         }
     }
 }
