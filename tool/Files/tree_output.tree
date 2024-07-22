@@ -1,24 +1,16 @@
-﻿Files
-│   AllowedExtensions.txt
-│   files_contents_output.txt
-│   nameFile
-│   nameFile-Encoding
-│   readFileStructure.ah2
-│   tree_output.tree
-│   
-└───tests
-    └───1
-        │   1.txt
-        │   
-        ├───a
-        │       a.txt
-        │       
-        ├───b
-        │       b.txt
-        │       
-        ├───c
-        │       c.exe
-        │       
-        └───d
-                d.txt
-                
+﻿tests
+└───1
+    │   1.txt
+    │   
+    ├───a
+    │       a.txt
+    │       
+    ├───b
+    │       b.txt
+    │       
+    ├───c
+    │       c.exe
+    │       
+    └───d
+            d.txt
+            
