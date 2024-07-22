@@ -11,7 +11,10 @@ ListLines 0
 SetWinDelay 0
 SetKeyDelay -1, -1
 
-~^s:: Reload ;# Guardar y recargar el script
+;! Uso solo para modo desarollo
+~^s:: Reload ; Guardar y recargar el script
+
+global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
 
 /**
  * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
@@ -40,10 +43,12 @@ CreateGui() {
 }
 
 /**
- * Función para seleccionar una carpeta mediante un diálogo.
+ * Selecciona una carpeta mediante un diálogo.
  */
 SelectFolder(*) {
     global FolderEdit
+    if (CheckIfGenerating())
+        return
     FolderPath := DirSelect()
     if (FolderPath) {
         FolderEdit.Value := NormalizePath(FolderPath)
@@ -52,8 +57,7 @@ SelectFolder(*) {
 }
 
 /**
- * Función para normalizar una ruta de archivo.
- * Reemplaza todas las barras "/" con "\" y elimina cualquier barra inicial o final.
+ * Normaliza una ruta de archivo reemplazando todas las barras "/" con "\" y eliminando cualquier barra inicial o final.
  * @param {string} Path - La ruta a normalizar.
  * @return {string} - La ruta normalizada.
  */
@@ -69,7 +73,7 @@ NormalizePath(Path) {
 }
 
 /**
- * Función para obtener el nombre de la carpeta principal de una ruta.
+ * Obtiene el nombre de la carpeta principal de una ruta.
  * @param {string} FolderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
  */
@@ -82,16 +86,33 @@ GetMainFolderName(FolderPath) {
 }
 
 /**
- * Función para generar el árbol de archivos de la carpeta seleccionada.
+ * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
+ * @return {boolean} - Verdadero si el proceso está en curso, falso en caso contrario.
+ */
+CheckIfGenerating() {
+    global isGenerating
+    if (isGenerating) {
+        MsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.")
+        return true
+    }
+    return false
+}
+
+/**
+ * Genera el árbol de archivos de la carpeta seleccionada.
  * @param {string} FolderPath - La ruta de la carpeta.
  */
 GenerateTree(FolderPath) {
+    global isGenerating
+    isGenerating := true
+
     ; Normalizar la ruta
     FolderPath := NormalizePath(FolderPath)
 
     ; Validar que la ruta es válida
     if (!FileExist(FolderPath) or FileExist(FolderPath) != "D" and FileExist(FolderPath) != "AD" and FileExist(FolderPath) != "RD") {
         MsgBox("Por favor, ingrese una ruta de carpeta válida.")
+        isGenerating := false
         return
     }
 
@@ -100,6 +121,7 @@ GenerateTree(FolderPath) {
     RunWait(Command, , "Hide")
     if (A_LastError) {
         MsgBox("Error al generar el árbol de archivos. Por favor, intente nuevamente.")
+        isGenerating := false
         return
     }
 
@@ -128,16 +150,20 @@ GenerateTree(FolderPath) {
 
     ; Mostrar mensaje de confirmación
     MsgBox("Árbol de archivos guardado en tree_output.tree")
+
+    isGenerating := false
 }
 
 /**
- * Función para manejar el evento de arrastre de archivos a la GUI.
+ * Maneja el evento de arrastre de archivos a la GUI.
  * @param {object} thisGui - La GUI donde se soltaron los archivos.
  * @param {object} Ctrl - El control donde se soltaron los archivos.
  * @param {array} FileArray - Lista de archivos arrastrados.
  */
 GuiDropFiles(thisGui, Ctrl, FileArray, *) {
     global FolderEdit
+    if (CheckIfGenerating())
+        return
     FolderPath := FileArray[1]
     if (FileExist(FolderPath) = "D") {
         FolderEdit.Value := NormalizePath(FolderPath)
@@ -148,7 +174,7 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
 }
 
 /**
- * Función para manejar el evento de tecla presionada.
+ * Maneja el evento de tecla presionada.
  * @param {WPARAM} wParam - El código de la tecla presionada.
  * @param {LPARAM} lParam - Información adicional sobre la tecla presionada.
  * @param {MSG} msg - El mensaje de la tecla presionada.
@@ -156,6 +182,8 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
  */
 WM_KEYDOWN(wParam, lParam, msg, hwnd) {
     global FolderEdit
+    if (CheckIfGenerating())
+        return
     if (wParam = 0x0D) { ; Código de la tecla Enter
         if (WinActive("Generador de Árbol de Archivos")) {
             GenerateTree(FolderEdit.Value)
