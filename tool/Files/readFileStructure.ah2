@@ -20,14 +20,21 @@ global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
  * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 CreateGui() {
-    global MyGui, FolderEdit, FolderButton
-    MyGui := Gui(, "Generador de Árbol de Archivos")
+    global MyGui, FolderEdit, FolderButton, DirectoryTreeCheckbox, FileContentsCheckbox
+    MyGui := Gui("+AlwaysOnTop", "Generador de Árbol de Archivos")
     MyGui.SetFont("s10", "Segoe UI")
 
     ; Añadir controles a la GUI
     MyGui.Add("Text", , "Arrastre una carpeta o selecciónela manualmente:")
     FolderEdit := MyGui.Add("Edit", "w400 vFolderPath")
-    FolderButton := MyGui.Add("Button", , "Seleccionar Carpeta")
+    FolderButton := MyGui.Add("Button", "xp+263 y+5", "Seleccionar Carpeta")
+
+    ; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
+    MyGui.Add("Text", "xm yp+10 w100", "Generate:").SetFont("s12", "Segoe UI")
+
+    ; Añadir CheckBoxes en línea y activarlos por defecto
+    DirectoryTreeCheckbox := MyGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
+    FileContentsCheckbox := MyGui.Add("CheckBox", "x+10 Checked", "Files Contents")
 
     ; Configurar eventos de botones
     FolderButton.OnEvent("Click", SelectFolder)
@@ -41,6 +48,7 @@ CreateGui() {
     ; Mostrar la GUI centrada
     MyGui.Show("AutoSize Center")
 }
+
 
 /**
  * Selecciona una carpeta mediante un diálogo.
