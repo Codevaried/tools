@@ -36,8 +36,10 @@ CreateGui() {
     DirectoryTreeCheckbox := MyGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
     FileContentsCheckbox := MyGui.Add("CheckBox", "x+10 Checked", "Files Contents")
 
-    ; Configurar eventos de botones
+    ; Configurar eventos de botones y checkboxes
     FolderButton.OnEvent("Click", SelectFolder)
+    DirectoryTreeCheckbox.OnEvent("Click", EnsureOneCheckboxChecked)
+    FileContentsCheckbox.OnEvent("Click", EnsureOneCheckboxChecked)
 
     ; Configurar evento de arrastre
     MyGui.OnEvent("DropFiles", GuiDropFiles)
@@ -50,6 +52,16 @@ CreateGui() {
 }
 
 /**
+ * Asegura que al menos uno de los checkboxes esté activado.
+ */
+EnsureOneCheckboxChecked(*) {
+    global DirectoryTreeCheckbox, FileContentsCheckbox
+    if (!DirectoryTreeCheckbox.Value && !FileContentsCheckbox.Value) {
+        DirectoryTreeCheckbox.Value := true
+    }
+}
+
+/**
  * Selecciona una carpeta mediante un diálogo.
  */
 SelectFolder(*) {
@@ -59,10 +71,7 @@ SelectFolder(*) {
     FolderPath := DirSelect()
     if (FolderPath) {
         FolderEdit.Value := NormalizePath(FolderPath)
-        if (FolderEdit.Value) { ; Verificar si la ruta es válida
-            CheckAndGenerate_DirectoryTree(FolderEdit.Value)
-            CheckAndGenerate_FilesContents(FolderEdit.Value)
-        }
+        ProcessFolder(FolderEdit.Value)
     }
 }
 
@@ -89,7 +98,7 @@ NormalizePath(Path) {
  */
 ValidateFolder(Path) {
     if (!FileExist(Path) or FileExist(Path) != "D" and FileExist(Path) != "AD" and FileExist(Path) != "RD") {
-        MsgBox("Por favor, ingrese una ruta de carpeta válida.")
+        ShowTopMsgBox("Error", "Por favor, ingrese una ruta de carpeta válida.", "Error")
         return false
     }
     return Path
@@ -115,10 +124,34 @@ GetMainFolderName(FolderPath) {
 CheckIfGenerating() {
     global isGenerating
     if (isGenerating) {
-        MsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.")
+        ShowTopMsgBox("Advertencia", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning")
         return true
     }
     return false
+}
+
+/**
+ * Procesa la carpeta seleccionada, generando el árbol de directorios y/o los contenidos de los archivos.
+ * @param {string} FolderPath - La ruta de la carpeta.
+ */
+ProcessFolder(FolderPath) {
+    global isGenerating
+    if (CheckIfGenerating())
+        return
+    ; SoundBeep()
+    isGenerating := true
+
+    ; Normalizar la ruta
+    FolderPath := NormalizePath(FolderPath)
+    if (!FolderPath) {
+        isGenerating := false
+        return
+    }
+
+    CheckAndGenerate_DirectoryTree(FolderPath)
+    CheckAndGenerate_FilesContents(FolderPath)
+    CopyToClipboard()
+    isGenerating := false
 }
 
 /**
@@ -148,22 +181,12 @@ CheckAndGenerate_FilesContents(FolderPath) {
  * @param {string} FolderPath - La ruta de la carpeta.
  */
 GenerateDirectoryTree(FolderPath) {
-    global isGenerating
-    isGenerating := true
-
-    ; Normalizar la ruta
-    FolderPath := NormalizePath(FolderPath)
-    if (!FolderPath) {
-        isGenerating := false
-        return
-    }
 
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
     Command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" FolderPath "' | Out-File -FilePath tree_output.tree -Encoding utf8}"
     RunWait(Command, , "Hide")
     if (A_LastError) {
-        MsgBox("Error al generar el árbol de archivos. Por favor, intente nuevamente.")
-        isGenerating := false
+        MsgBox("+AlwaysOnTop Error al generar el árbol de archivos. Por favor, intente nuevamente.")
         return
     }
 
@@ -180,7 +203,7 @@ GenerateDirectoryTree(FolderPath) {
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     FileTreeArray[1] := FolderName
     ; Filtrar líneas vacías y eliminar espacios en blanco y tabulaciones
-    FileTreeNew := "### Estructura de Archivos:`n"
+    FileTreeNew := ""
     for line in FileTreeArray {
         if (StrLen(Trim(line)) > 0) {
             FileTreeNew .= line "`n"
@@ -191,9 +214,7 @@ GenerateDirectoryTree(FolderPath) {
     FileAppend(FileTreeNew, "tree_output.tree", "UTF-8")
 
     ; Mostrar mensaje de confirmación
-    MsgBox("Árbol de archivos guardado en tree_output.tree")
-
-    isGenerating := false
+    ; MsgBox("Árbol de archivos guardado en tree_output.tree")
 }
 
 /**
@@ -217,7 +238,7 @@ HasValue(list, value) {
  */
 LoadAllowedExtensions(FilePath) {
     if !FileExist(FilePath) {
-        MsgBox("El archivo de extensiones permitidas no existe.")
+        ShowTopMsgBox("Error", "El archivo de extensiones permitidas no existe.", "Error")
         return []
     }
     Extensions := []
@@ -234,37 +255,29 @@ LoadAllowedExtensions(FilePath) {
  * @param {string} FolderPath - La ruta de la carpeta.
  */
 GenerateFilesContents(FolderPath) {
-    global isGenerating
-    isGenerating := true
-
-    ; Normalizar la ruta
-    FolderPath := NormalizePath(FolderPath)
-    if (!FolderPath) {
-        isGenerating := false
-        return
-    }
-
     FileList := ""
     AllowedExtensions := LoadAllowedExtensions("AllowedExtensions.txt") ; Cargar extensiones permitidas desde archivo
     if (AllowedExtensions.Length = 0) {
-        MsgBox("No se encontraron extensiones permitidas.")
-        isGenerating := false
+        ShowTopMsgBox("Error", "No se encontraron extensiones permitidas.", "Error")
         return
     }
 
     MainFolder := GetMainFolderName(FolderPath)
+    FileArray := []
     Loop Files, FolderPath "\*.*", "R" {
         ; Obtener la ruta relativa al directorio principal
         RelativePath := StrReplace(A_LoopFileFullPath, FolderPath "\")
         ; Obtener la extensión del archivo
         FileExt := StrLower(StrSplit(A_LoopFileFullPath, ".").Pop())
         ; Verificar si la extensión está en la lista de archivos permitidos
-        if !HasValue(AllowedExtensions, FileExt) {
-            continue ; Omitir archivos no permitidos
+        if HasValue(AllowedExtensions, FileExt) {
+            FileArray.Push(RelativePath)
         }
+    }
 
+    for index, RelativePath in FileArray {
         try {
-            FileContents := FileRead(A_LoopFileFullPath, "UTF-8")
+            FileContents := FileRead(FolderPath "\" RelativePath, "UTF-8")
             ErrorFileContents := false
         } catch {
             FileContents := ""
@@ -272,9 +285,13 @@ GenerateFilesContents(FolderPath) {
         }
 
         if (ErrorFileContents)
-            FileList .= "Archivo '" RelativePath "'[Error Lectura del archivo]`n`n "
+            FileList .= "Archivo '" RelativePath " '[Error Lectura del archivo]"
         else
-            FileList .= " Archivo '" RelativePath "': `n " FileContents "`n`n "
+            FileList .= "Archivo '" RelativePath "': `n" FileContents
+
+        if (index < FileArray.Length) {
+            FileList .= "`n`n"
+        }
     }
 
     ; Escribir los contenidos en un archivo de salida
@@ -283,11 +300,36 @@ GenerateFilesContents(FolderPath) {
     FileAppend(FileList, "files_contents_output.txt", "UTF-8")
 
     ; Mostrar mensaje de confirmación
-    MsgBox("Contenido de los archivos guardado en files_contents_output.txt")
-
-    isGenerating := false
+    ; MsgBox("Contenido de los archivos guardado en files_contents_output.txt")
 }
 
+/**
+ * Copia la información generada al portapapeles según los checkboxes seleccionados.
+ */
+CopyToClipboard() {
+    global DirectoryTreeCheckbox, FileContentsCheckbox
+    Clipboard := ""  ; Limpia el portapapeles
+    ClipWait(1, 0)  ; Espera hasta que el portapapeles esté vacío, con un timeout de 1 segundo
+
+    ; Genera el contenido a copiar
+    ClipboardContent := ""
+    if (DirectoryTreeCheckbox.Value) {
+        FileTree := FileRead("tree_output.tree", "UTF-8")
+        ClipboardContent .= "### Estructura de Archivos:`n" FileTree "`n`n"
+    }
+    if (FileContentsCheckbox.Value) {
+        FileContents := FileRead("files_contents_output.txt", "UTF-8")
+        ClipboardContent .= "### Contenido de los Archivos:`n" FileContents "`n`n"
+    }
+
+    ; Asigna el contenido al portapapeles
+    A_Clipboard := ClipboardContent
+    if !ClipWait(2) {
+        ShowTopMsgBox("Error", "El intento de copiar texto al portapapeles falló.", "Error")
+        return
+    }
+    ShowTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
+}
 
 /**
  * Maneja el evento de arrastre de archivos a la GUI.
@@ -302,8 +344,7 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
     FolderPath := NormalizePath(FileArray[1])
     if (FolderPath) { ; Verificar si la ruta es válida
         FolderEdit.Value := FolderPath
-        CheckAndGenerate_DirectoryTree(FolderEdit.Value)
-        CheckAndGenerate_FilesContents(FolderEdit.Value)
+        ProcessFolder(FolderEdit.Value)
     }
 }
 
@@ -320,10 +361,33 @@ WM_KEYDOWN(wParam, lParam, msg, hwnd) {
         return
     if (wParam = 0x0D) { ; Código de la tecla Enter
         if (WinActive("Generador de Árbol de Archivos")) {
-            CheckAndGenerate_DirectoryTree(FolderEdit.Value)
-            CheckAndGenerate_FilesContents(FolderEdit.Value)
+            ProcessFolder(FolderEdit.Value)
         }
     }
+}
+
+/**
+ * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
+ * @param {string} title - El título del MsgBox.
+ * @param {string} message - El mensaje a mostrar en el MsgBox.
+ * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
+ */
+ShowTopMsgBox(title, message, type := "Info") {
+    ; Determinar el ícono basado en el tipo de mensaje
+    switch type {
+        case "Error":
+            icon := 0x10 ; Ícono de error
+        case "Warning":
+            icon := 0x30 ; Ícono de advertencia
+        case "Info":
+            icon := 0x40 ; Ícono de información
+        case "Question":
+            icon := 0x20 ; Ícono de pregunta
+        default:
+            icon := 0x40 ; Ícono de información por defecto
+    }
+    ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
+    MsgBox(message, title, icon | 0x40000)
 }
 
 CreateGui()

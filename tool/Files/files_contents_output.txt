@@ -1,13 +1,19 @@
-﻿ Archivo '1.txt': 
- Archivo 1
+﻿Archivo '1\1.txt': 
+Archivo 1
+line 2
+line 3
 
-  Archivo 'a\a.txt': 
- Archivo a
+Archivo '1\a\a.txt': 
+Archivo a
+line 2
+line 3
 
-  Archivo 'b\b.txt': 
- Archivo b
+Archivo '1\b\b.txt': 
+Archivo b
+line 2
+line 3
 
-  Archivo 'd\d.txt': 
- Archivo d
-
- 
+Archivo '1\d\d.txt': 
+Archivo d
+line 2
+line 3
