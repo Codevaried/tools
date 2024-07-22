@@ -45,7 +45,7 @@ CreateGui() {
     MyGui.OnEvent("DropFiles", GuiDropFiles)
 
     ; Configurar la captura de la tecla Enter
-    OnMessage(0x0100, WM_KEYDOWN)
+    OnMessage(0x0100, WM_KeyDown)
 
     ; Mostrar la GUI centrada
     MyGui.Show("AutoSize Center")
@@ -285,7 +285,7 @@ GenerateFilesContents(FolderPath) {
         }
 
         if (ErrorFileContents)
-            FileList .= "Archivo '" RelativePath " '[Error Lectura del archivo]"
+            FileList .= "Archivo '" RelativePath "' [Error Lectura del archivo]"
         else
             FileList .= "Archivo '" RelativePath "': `n" FileContents
 
@@ -355,7 +355,7 @@ GuiDropFiles(thisGui, Ctrl, FileArray, *) {
  * @param {MSG} msg - El mensaje de la tecla presionada.
  * @param {HWND} hwnd - El identificador de la ventana.
  */
-WM_KEYDOWN(wParam, lParam, msg, hwnd) {
+WM_KeyDown(wParam, lParam, msg, hwnd) {
     global FolderEdit
     if (CheckIfGenerating())
         return

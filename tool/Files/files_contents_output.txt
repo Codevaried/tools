@@ -1,19 +1,13 @@
-﻿Archivo '1\1.txt': 
-Archivo 1
-line 2
-line 3
+﻿Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\AllowedExtensions.txt' [Error Lectura del archivo]
 
-Archivo '1\a\a.txt': 
-Archivo a
-line 2
-line 3
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\files_contents_output.txt' [Error Lectura del archivo]
 
-Archivo '1\b\b.txt': 
-Archivo b
-line 2
-line 3
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\readFileStructure.ah2' [Error Lectura del archivo]
 
-Archivo '1\d\d.txt': 
-Archivo d
-line 2
-line 3
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\tests\1\1.txt' [Error Lectura del archivo]
+
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\tests\1\a\a.txt' [Error Lectura del archivo]
+
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\tests\1\b\b.txt' [Error Lectura del archivo]
+
+Archivo 'C:\Users\Eloy\Documents\PROGRAMMING\GitHub\tools\tool\Files\tests\1\d\d.txt' [Error Lectura del archivo]
