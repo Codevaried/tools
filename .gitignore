@@ -1,5 +1,5 @@
 #* Ignorar la carpeta (Archivos de uso Personal)
-/bin
+/data
 
 # Ignorar archivos de logs
 logs

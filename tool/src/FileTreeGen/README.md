@@ -23,13 +23,15 @@
 La estructura de archivos del proyecto es la siguiente:
 
 ```
-Files
+FileTreeGen
 │   AllowedExtensions.txt
 │   FileTreeGen.ah2
-│   FileTreeGen.exe
-│   FileTreeGen.ico
 │   output.tree
 │   README.md
+│
+├───bin
+│       FileTreeGen.exe
+│       FileTreeGen.ico
 │
 └───tests
     └───1
@@ -61,6 +63,8 @@ md
 csv
 log
 ini
+rtf
+tex
 
 # Lenguajes de programación
 ahk
@@ -78,6 +82,7 @@ php
 sh
 bat
 ps1
+sql
 
 # Archivos de configuración y otros
 conf
@@ -130,7 +135,7 @@ Funciones para eliminar archivos si existen y unir los archivos temporales en un
 
 Para ejecutar el programa, tiene dos opciones:
 
-1. **Usar el Archivo Ejecutable**: Ejecute `FileTreeGen.exe` directamente. No se requiere la instalación de AutoHotkey. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
+1. **Usar el Archivo Ejecutable**: Ejecute `bin/FileTreeGen.exe` directamente. No se requiere la instalación de AutoHotkey. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
 2. **Usar el Script en AutoHotkey**: Asegúrese de tener AutoHotkey v2.0 instalado y ejecute `FileTreeGen.ah2`. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
@@ -146,37 +151,47 @@ Ejemplos de archivos de prueba ubicados en la carpeta `tests`:
 
 - `tests\1\1.txt`:
 
-  ```
-  Archivo 1
-  line 2
-  line 3
-  ```
+````
+
+Archivo 1
+line 2
+line 3
+
+```
 
 - `tests\1\a\a.txt`:
 
-  ```
-  Archivo a
-  line 2
-  line 3
-  ```
+```
+
+Archivo a
+line 2
+line 3
+
+```
 
 - `tests\1\b\b.txt`:
 
-  ```
-  Archivo b
-  line 2
-  line 3
-  ```
+```
+
+Archivo b
+line 2
+line 3
+
+```
 
 - `tests\1\d\d.txt`:
-  ```
-  Archivo d
-  line 2
-  line 3
-  ```
+```
+
+Archivo d
+line 2
+line 3
+
+```
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.
 
 ### Conclusión
 
 **FileTreeGen** es una herramienta útil para la generación de estructuras de directorios y la extracción de contenidos de archivos de tipos específicos, facilitando la documentación y el análisis de proyectos.
+```
+````

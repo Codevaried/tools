@@ -65,7 +65,11 @@ SetKeyDelay -1, -1
 
 ;! Uso solo para modo desarollo
 #HotIf !A_IsCompiled
-^s:: Reload ; Guardar y recargar el script
+^s:: {
+    Send("^s")  ; Simula Ctrl+S para guardar el archivo
+    Sleep(100)  ; Pequeño retraso para asegurar que el archivo se guarde
+    Reload()  ; Recarga el script
+}
 #HotIf
 
 
@@ -75,7 +79,7 @@ SetKeyDelay -1, -1
  * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 createGui() {
-    global NAME_PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox
+    global NAME_PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, generateText
     myGui := Gui("+AlwaysOnTop", NAME_PROGRAM)
     myGui.SetFont("s10", "Segoe UI")
 
@@ -85,7 +89,7 @@ createGui() {
     folderButton := myGui.Add("Button", "xp+263 y+5", "Seleccionar Carpeta")
 
     ; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
-    myGui.Add("Text", "xm yp+10 w100", "Generate:").SetFont("s12", "Segoe UI")
+    generateText := myGui.Add("Text", "xm yp+10 w100 h23 vGenerateText", "Generate:").SetFont("s12", "Segoe UI")
 
     ; Añadir CheckBoxes en línea y activarlos por defecto
     directoryTreeCheckbox := myGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
@@ -263,7 +267,7 @@ hasValue(list, value) {
  */
 loadAllowedExtensions(filePath) {
     if !FileExist(filePath) {
-        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe.", "Error")
+        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe. Asegúrese de que '" filePath "' está en el directorio correcto y contiene las extensiones válidas, una por línea.", "Error")
         return []
     }
     extensions := []
@@ -320,7 +324,7 @@ init() {
     fileExtents := requiredFiles.extents
 
     if (!FileExist(fileExtents)) {
-        message := "El archivo requerido '" fileExtents "' no existe. Por favor, asegúrese de que el archivo esté presente en el directorio adecuado."
+        message := "El archivo requerido '" fileExtents "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco."
         showTopMsgBox("Archivo Requerido No Encontrado", message, "Error")
         ExitApp 1
     }
@@ -337,9 +341,8 @@ checkIfGenerating() {
     global isGenerating
     if (isGenerating) {
         showTopMsgBox("Proceso de Generación en Curso", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning")
-        return true
+        return 1
     }
-    return false
 }
 
 /**
@@ -347,22 +350,47 @@ checkIfGenerating() {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 processFolder(folderPath) {
-    global isGenerating
-    if (checkIfGenerating())
+    global isGenerating, myGui
+
+    if (checkIfGenerating()) {
         return
+    }
+
     isGenerating := true
+    myGui["GenerateText"].Value := "Generating..."  ; Cambia el texto a "Generating..."
 
     ; Normalizar la ruta
     folderPath := normalizePath(folderPath)
     if (!folderPath) {
-        isGenerating := false
+        endGeneration()
         return
     }
 
-    checkAndGenerateDirectoryTree(folderPath)
-    checkAndGenerateFilesContents(folderPath)
+    ; Generar el árbol de directorios
+    if (checkAndGenerateDirectoryTree(folderPath)) {
+        endGeneration()
+        return
+    }
+
+    ; Generar el contenido de los archivos
+    if (checkAndGenerateFilesContents(folderPath)) {
+        endGeneration()
+        return
+    }
+
+    ; Combinar archivos y finalizar
     mergeFiles()
+    endGeneration()
+}
+
+/**
+ * * Finaliza el proceso de generación limpiando archivos temporales y estableciendo la bandera de generación.
+ */
+endGeneration() {
+    global isGenerating, myGui
+    clearTemp()
     isGenerating := false
+    myGui["GenerateText"].Value := "Generate:"  ; Cambia el texto de vuelta a "Generate:"
 }
 
 /**
@@ -372,7 +400,7 @@ processFolder(folderPath) {
 checkAndGenerateDirectoryTree(folderPath) {
     global directoryTreeCheckbox
     if (directoryTreeCheckbox.Value) {
-        generateDirectoryTree(folderPath)
+        return generateDirectoryTree(folderPath)
     }
 }
 
@@ -383,7 +411,7 @@ checkAndGenerateDirectoryTree(folderPath) {
 checkAndGenerateFilesContents(folderPath) {
     global fileContentsCheckbox
     if (fileContentsCheckbox.Value) {
-        generateFilesContents(folderPath)
+        return generateFilesContents(folderPath)
     }
 }
 
@@ -402,7 +430,7 @@ generateDirectoryTree(folderPath) {
     RunWait(command, , "Hide")
     if (A_LastError) {
         MsgBox("+AlwaysOnTop Error al generar el árbol de archivos. Por favor, intente nuevamente.")
-        return
+        return 1
     }
 
     ; Leer el archivo de salida y eliminar las dos primeras líneas
@@ -445,8 +473,8 @@ generateFilesContents(folderPath) {
     fileList := ""
     allowedExtensions := loadAllowedExtensions(fileExtents) ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
-        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas.", "Error")
-        return
+        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileExtents "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "Error")
+        return 1
     }
 
     mainFolder := getMainFolderName(folderPath)
@@ -503,6 +531,15 @@ fileDel(file) {
 }
 
 /**
+ * * Elimina archivos temporales utilizados durante el procesamiento.
+ */
+clearTemp() {
+    global tempFiles
+    fileDel(tempFiles.dirTree)
+    fileDel(tempFiles.filesContents)
+}
+
+/**
  * * Une los archivos dirTree.tmp y filesContents.tmp en uno solo según los checkboxes activados.
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
@@ -547,10 +584,6 @@ mergeFiles() {
         showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en output.tree.", "Error")
         return
     }
-
-    ; Eliminar archivos intermedios
-    fileDel(temp1)
-    fileDel(temp2)
 
     ; Copiar el contenido final al portapapeles
     A_Clipboard := ""
