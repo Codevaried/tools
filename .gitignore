@@ -1,7 +1,11 @@
 #* Ignorar la carpeta (Archivos de uso Personal)
 /data
 
-# Ignorar archivos de logs
+#* Ignorar Archivos innecesarios (FileTreeGen)
+/tool/src/FileTreeGen/bin/AllowedExtensions.txt
+/tool/src/FileTreeGen/bin/output.md
+
+#; Ignorar archivos de logs
 logs
 *.log
 npm-debug.log*
@@ -10,23 +14,23 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Ignorar directorio node_modules
+#; Ignorar directorio node_modules
 /node_modules
 
-# Ignorar archivos de construcción
+#; Ignorar archivos de construcción
 dist
 build
 
-# Ignorar directorios de entornos de desarrollo local
+#; Ignorar directorios de entornos de desarrollo local
 .env
 .env.local
 .env.*.local
 
-# Ignorar directorios y archivos específicos del sistema operativo
+#; Ignorar directorios y archivos específicos del sistema operativo
 .DS_Store
 Thumbs.db
 
-# Ignorar archivos específicos de editores
+#; Ignorar archivos específicos de editores
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -39,5 +43,5 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Ignorar archivos de salida de TypeScript
+#; Ignorar archivos de salida de TypeScript
 *.tsbuildinfo
