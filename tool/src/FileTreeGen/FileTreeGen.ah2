@@ -97,8 +97,8 @@ createGui() {
 
     ; Configurar eventos de botones y checkboxes
     folderButton.OnEvent("Click", selectFolder)
-    directoryTreeCheckbox.OnEvent("Click", ensureOneCheckboxChecked)
-    fileContentsCheckbox.OnEvent("Click", ensureOneCheckboxChecked)
+    directoryTreeCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(directoryTreeCheckbox))
+    fileContentsCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(fileContentsCheckbox))
 
     ; Configurar evento de arrastre
     myGui.OnEvent("DropFiles", guiDropFiles)
@@ -123,10 +123,10 @@ closeProgram(*) {
 /**
  * * Asegura que al menos uno de los checkboxes esté activado.
  */
-ensureOneCheckboxChecked(*) {
+ensureOneCheckboxChecked(checkbox) {
     global directoryTreeCheckbox, fileContentsCheckbox
     if (!directoryTreeCheckbox.Value && !fileContentsCheckbox.Value) {
-        directoryTreeCheckbox.Value := true
+        checkbox.Value := true
     }
 }
 
