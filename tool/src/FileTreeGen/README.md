@@ -173,6 +173,23 @@ line 3
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.
 
+### Notas Adicionales
+
+> [!NOTE]  
+> FileTreeGen es capaz de generar tanto la estructura de directorios como el contenido de archivos específicos en una carpeta seleccionada. La interfaz gráfica (GUI) facilita la selección de carpetas y la configuración de las opciones de generación.
+
+> [!TIP]
+> Puede arrastrar y soltar una carpeta directamente en la GUI de FileTreeGen para una selección rápida. Además, asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según sus necesidades antes de iniciar la generación.
+
+> [!IMPORTANT]  
+> Es fundamental que el archivo `AllowedExtensions.txt` esté presente en el directorio adecuado. Este archivo define las extensiones de archivos permitidas para la extracción de contenidos. Sin este archivo, FileTreeGen no podrá realizar su función correctamente.
+
+> [!WARNING]  
+> Soy consciente de que hay problemas de lectura de contenido de archivos cuando se usan rutas relativas. Para evitar estos problemas, asegúrese de proporcionar rutas absolutas al seleccionar carpetas y archivos.
+
+> [!CAUTION]
+> Evite ejecutar múltiples instancias de FileTreeGen simultáneamente, ya que el script incluye una bandera para evitar ejecuciones concurrentes. Ejecutar varias instancias podría resultar en comportamientos inesperados o errores en la generación del árbol de archivos y el contenido de los archivos.
+
 ### Conclusión
 
 **FileTreeGen** es una herramienta útil para la generación de estructuras de directorios y la extracción de contenidos de archivos de tipos específicos, facilitando la documentación y el análisis de proyectos.
