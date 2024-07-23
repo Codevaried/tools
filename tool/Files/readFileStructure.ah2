@@ -4,38 +4,73 @@
 #NoTrayIcon
 */
 
-A_MaxHotkeysPerInterval := 1000
+/**
+ * ? Archivo principal del script de AutoHotkey v2.
+ * * Este script permite generar un árbol de archivos y contenidos de archivos de una carpeta seleccionada.
+ * Proporciona una interfaz gráfica (GUI) para seleccionar una carpeta, generar la estructura de directorios
+ * y obtener el contenido de los archivos de tipos específicos dentro de esa carpeta.
+ * Las funcionalidades principales incluyen:
+ *   - Selección de carpetas mediante un diálogo o arrastrando y soltando.
+ *   - Generación del árbol de directorios y contenido de archivos.
+ *   - Combinación de la estructura de directorios y contenido de archivos en un solo archivo de salida.
+ *   - Copia del resultado final al portapapeles para facilitar su uso.
+ * 
+ * @autor Eloy Navarro Escarabajal
+ */
 
+;todo---SECTION: GLOBAL VARIABLES
+
+/**
+ * * Nombre del programa. Actualizar con el nombre adecuado.
+ * @global {string}
+ */
+global NAME_PROGRAM := "FileTreeGen (Generación del árbol de archivos)"
+
+/**
+ * * Archivos requeridos por el programa.
+ * @global {object}
+ */
+global requiredFiles := {
+    extents: "AllowedExtensions.txt",  ; Archivo que contiene las extensiones permitidas
+}
+
+/**
+ * * Archivos temporales utilizados durante la ejecución del programa.
+ * @global {object}
+ */
+global tempFiles := {
+    dirTree: generateTempFileName("tree_output"),  ; Archivo temporal para el árbol de directorios
+    filesContents: generateTempFileName("filesContents_output"),  ; Archivo temporal para los contenidos de archivos
+    output: "output.tree"  ; Archivo de salida combinado
+}
+
+/**
+ * * Bandera para evitar ejecuciones concurrentes.
+ * @global {boolean}
+ */
+global isGenerating := false
+
+;todo---SECTION: Environment configuration
+
+A_MaxHotkeysPerInterval := 1000
 KeyHistory 0
 ListLines 0
 SetWinDelay 0
 SetKeyDelay -1, -1
 
+;todo---SECTION: Development Hotkeys
+
 ;! Uso solo para modo desarollo
 ~^s:: Reload ; Guardar y recargar el script
 
-;* Crear el objeto con los nombres de los archivos requeridos
-global requiredFiles := {
-    extents: "AllowedExtensions.txt",
-}
-
-;* Crear el objeto con las propiedades directoryTree y filesContents
-global tempFiles := {
-    dirTree: generateTempFileName("tree_output"),
-    filesContents: generateTempFileName("filesContents_output"),
-    output: "output.tree"
-}
-
-global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
-
-;? section: GUI Management
+;todo---SECTION: GUI Management
 
 /**
- * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
+ * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 createGui() {
-    global myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox
-    myGui := Gui("+AlwaysOnTop", "Generador de Árbol de Archivos")
+    global NAME_PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox
+    myGui := Gui("+AlwaysOnTop", NAME_PROGRAM)
     myGui.SetFont("s10", "Segoe UI")
 
     ; Añadir controles a la GUI
@@ -66,7 +101,7 @@ createGui() {
 }
 
 /**
- * Asegura que al menos uno de los checkboxes esté activado.
+ * * Asegura que al menos uno de los checkboxes esté activado.
  */
 ensureOneCheckboxChecked(*) {
     global directoryTreeCheckbox, fileContentsCheckbox
@@ -76,7 +111,7 @@ ensureOneCheckboxChecked(*) {
 }
 
 /**
- * Selecciona una carpeta mediante un diálogo.
+ * * Selecciona una carpeta mediante un diálogo.
  */
 selectFolder(*) {
     global folderEdit
@@ -90,7 +125,7 @@ selectFolder(*) {
 }
 
 /**
- * Maneja el evento de arrastre de archivos a la GUI.
+ * * Maneja el evento de arrastre de archivos a la GUI.
  * @param {object} thisGui - La GUI donde se soltaron los archivos.
  * @param {object} ctrl - El control donde se soltaron los archivos.
  * @param {array} fileArray - Lista de archivos arrastrados.
@@ -107,7 +142,7 @@ guiDropFiles(thisGui, ctrl, fileArray, *) {
 }
 
 /**
- * Maneja el evento de tecla presionada.
+ * * Maneja el evento de tecla presionada.
  * @param {WPARAM} wParam - El código de la tecla presionada.
  * @param {LPARAM} lParam - Información adicional sobre la tecla presionada.
  * @param {MSG} msg - El mensaje de la tecla presionada.
@@ -124,10 +159,10 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
     }
 }
 
-;? section: Utility Functions
+;todo---SECTION: Utility Functions
 
 /**
- * Normaliza una ruta de archivo reemplazando todas las barras "/" con "\" y eliminando cualquier barra inicial o final.
+ * * Normaliza una ruta de archivo reemplazando todas las barras "/" con "\" y eliminando cualquier barra inicial o final.
  * @param {string} path - La ruta a normalizar.
  * @return {string} - La ruta normalizada.
  */
@@ -143,7 +178,7 @@ normalizePath(path) {
 }
 
 /**
- * Valida si una ruta es una carpeta válida.
+ * * Valida si una ruta es una carpeta válida.
  * @param {string} path - La ruta a validar.
  * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
  */
@@ -156,7 +191,7 @@ validateFolder(path) {
 }
 
 /**
- * Obtiene el nombre de la carpeta principal de una ruta.
+ * * Obtiene el nombre de la carpeta principal de una ruta.
  * @param {string} folderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
  */
@@ -169,7 +204,7 @@ getMainFolderName(folderPath) {
 }
 
 /**
- * Verifica si un valor está en una lista.
+ * * Verifica si un valor está en una lista.
  * @param {Array} list - La lista a verificar.
  * @param {string} value - El valor a buscar.
  * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
@@ -183,7 +218,7 @@ hasValue(list, value) {
 }
 
 /**
- * Lee las extensiones permitidas desde un archivo.
+ * * Lee las extensiones permitidas desde un archivo.
  * @param {string} filePath - La ruta del archivo que contiene las extensiones permitidas.
  * @return {Array} - Una lista de extensiones permitidas.
  */
@@ -202,7 +237,7 @@ loadAllowedExtensions(filePath) {
 }
 
 /**
- * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
+ * * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
  * @param {string} prefix - El prefijo para el nombre del archivo.
  * @return {string} - El nombre del archivo temporal generado.
  */
@@ -212,7 +247,7 @@ generateTempFileName(prefix) {
 }
 
 /**
- * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
+ * * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
  * @param {string} title - El título del MsgBox.
  * @param {string} message - El mensaje a mostrar en el MsgBox.
  * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
@@ -235,10 +270,28 @@ showTopMsgBox(title, message, type := "Info") {
     MsgBox(message, title, icon | 0x40000)
 }
 
-;? section: Process Management
+;todo---SECTION: Process Management
+
 
 /**
- * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
+ * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
+ */
+init() {
+    global requiredFiles
+    fileExtents := requiredFiles.extents
+
+    if (!FileExist(fileExtents)) {
+        message := "El archivo requerido '" fileExtents "' no existe. Por favor, asegúrese de que el archivo esté presente en el directorio adecuado."
+        showTopMsgBox("Archivo Requerido No Encontrado", message, "Error")
+        ExitApp 1
+    }
+
+    ; Inicializar la GUI
+    createGui()
+}
+
+/**
+ * * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
  * @return {boolean} - Verdadero si el proceso está en curso, falso en caso contrario.
  */
 checkIfGenerating() {
@@ -251,7 +304,7 @@ checkIfGenerating() {
 }
 
 /**
- * Procesa la carpeta seleccionada, generando el árbol de directorios y/o los contenidos de los archivos.
+ * * Procesa la carpeta seleccionada, generando el árbol de directorios y/o los contenidos de los archivos.
  * @param {string} folderPath - La ruta de la carpeta.
  */
 processFolder(folderPath) {
@@ -274,7 +327,7 @@ processFolder(folderPath) {
 }
 
 /**
- * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
+ * * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
  * @param {string} folderPath - La ruta de la carpeta.
  */
 checkAndGenerateDirectoryTree(folderPath) {
@@ -285,7 +338,7 @@ checkAndGenerateDirectoryTree(folderPath) {
 }
 
 /**
- * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
+ * * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
  * @param {string} folderPath - La ruta de la carpeta.
  */
 checkAndGenerateFilesContents(folderPath) {
@@ -295,10 +348,10 @@ checkAndGenerateFilesContents(folderPath) {
     }
 }
 
-;? section: Directory Tree Generation
+;todo---SECTION: Directory Tree Generation
 
 /**
- * Genera el árbol de archivos de la carpeta seleccionada.
+ * * Genera el árbol de archivos de la carpeta seleccionada.
  * @param {string} folderPath - La ruta de la carpeta.
  */
 generateDirectoryTree(folderPath) {
@@ -336,10 +389,10 @@ generateDirectoryTree(folderPath) {
     FileAppend(fileTreeNew, temp, "UTF-8")
 }
 
-;? section: Files Contents Generation
+;todo---SECTION: Files Contents Generation
 
 /**
- * Genera el contenido de los archivos de la carpeta seleccionada.
+ * * Genera el contenido de los archivos de la carpeta seleccionada.
  * @param {string} folderPath - La ruta de la carpeta.
  */
 generateFilesContents(folderPath) {
@@ -392,10 +445,10 @@ generateFilesContents(folderPath) {
     FileAppend(fileList, temp, "UTF-8")
 }
 
-;? section: File Management
+;todo---SECTION: File Management
 
 /**
- * Elimina un archivo si existe.
+ * * Elimina un archivo si existe.
  * @param {string} file - La ruta del archivo a eliminar.
  */
 fileDel(file) {
@@ -404,7 +457,7 @@ fileDel(file) {
 }
 
 /**
- * Une los archivos dirTree.tmp y filesContents.tmp en uno solo según los checkboxes activados.
+ * * Une los archivos dirTree.tmp y filesContents.tmp en uno solo según los checkboxes activados.
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
 mergeFiles() {
@@ -465,5 +518,5 @@ mergeFiles() {
     showTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
 }
 
-; Inicializar la GUI
-createGui()
+;* Inicializa el programa.
+init()
