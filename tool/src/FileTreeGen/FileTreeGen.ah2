@@ -503,9 +503,9 @@ generateFilesContents(folderPath) {
             }
 
             if (errorFileContents)
-                fileList .= "Archivo '" relativePath "' [Error Lectura del archivo]"
+                fileList .= "#### Archivo '" relativePath "' [Error Lectura del archivo]"
             else
-                fileList .= "Archivo '" relativePath "': `n" fileContents
+                fileList .= "#### Archivo '" relativePath "': `n" fileContents
 
             if (index < fileArray.Length) {
                 fileList .= "`n`n"

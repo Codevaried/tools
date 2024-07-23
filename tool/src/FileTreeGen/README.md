@@ -149,43 +149,26 @@ Para ejecutar el programa, tiene dos opciones:
 
 Ejemplos de archivos de prueba ubicados en la carpeta `tests`:
 
-- `tests\1\1.txt`:
-
-````
-
+```
+#### Archivo '1\1.txt':
 Archivo 1
 line 2
 line 3
 
-```
-
-- `tests\1\a\a.txt`:
-
-```
-
+#### Archivo '1\a\a.txt':
 Archivo a
 line 2
 line 3
 
-```
-
-- `tests\1\b\b.txt`:
-
-```
-
+#### Archivo '1\b\b.txt':
 Archivo b
 line 2
 line 3
 
-```
-
-- `tests\1\d\d.txt`:
-```
-
+#### Archivo '1\d\d.txt':
 Archivo d
 line 2
 line 3
-
 ```
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.
@@ -193,5 +176,3 @@ Estos archivos de ejemplo permiten probar la funcionalidad del programa y verifi
 ### Conclusión
 
 **FileTreeGen** es una herramienta útil para la generación de estructuras de directorios y la extracción de contenidos de archivos de tipos específicos, facilitando la documentación y el análisis de proyectos.
-```
-````
