@@ -456,7 +456,7 @@ generateDirectoryTree(folderPath) {
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     fileTreeArray[1] := folderName
     ; Filtrar líneas vacías y eliminar espacios en blanco y tabulaciones
-    fileTreeNew := "```````n"
+    fileTreeNew := "``````tree`n"
     for line in fileTreeArray {
         if (StrLen(Trim(line)) > 0) {
             fileTreeNew .= line "`n"

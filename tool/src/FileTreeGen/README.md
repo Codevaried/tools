@@ -22,7 +22,7 @@
 
 La estructura de archivos del proyecto es la siguiente:
 
-```
+```tree
 FileTreeGen
 │   AllowedExtensions.txt
 │   FileTreeGen.ah2
