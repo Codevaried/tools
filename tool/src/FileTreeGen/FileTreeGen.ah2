@@ -42,7 +42,7 @@ global requiredFiles := {
 global tempFiles := {
     dirTree: generateTempFileName("tree_output"), ; Archivo temporal para el árbol de directorios
     filesContents: generateTempFileName("filesContents_output"), ; Archivo temporal para los contenidos de archivos
-    output: "output.tree" ; Archivo de salida combinado
+    output: "output.md" ; Archivo de salida combinado
 }
 
 /**
@@ -261,6 +261,16 @@ hasValue(list, value) {
 }
 
 /**
+ * * Obtiene la extensión de un archivo a partir de su ruta.
+ * @param {string} filePath - La ruta del archivo.
+ * @returns {string} La extensión del archivo, incluyendo el punto. Si no tiene extensión, retorna una cadena vacía.
+ */
+getFileExtension(filePath) {
+    extension := RegExReplace(filePath, ".*\.(.*)", "$1")
+    return InStr(filePath, ".") ? extension : ""
+}
+
+/**
  * * Lee las extensiones permitidas desde un archivo.
  * @param {string} filePath - La ruta del archivo que contiene las extensiones permitidas.
  * @return {Array} - Una lista de extensiones permitidas.
@@ -446,12 +456,14 @@ generateDirectoryTree(folderPath) {
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     fileTreeArray[1] := folderName
     ; Filtrar líneas vacías y eliminar espacios en blanco y tabulaciones
-    fileTreeNew := ""
+    fileTreeNew := "```````n"
     for line in fileTreeArray {
         if (StrLen(Trim(line)) > 0) {
             fileTreeNew .= line "`n"
         }
     }
+    fileTreeNew .= "```````n"
+
     ; Reescribir el archivo con las modificaciones
     fileDel(temp)
     FileAppend(fileTreeNew, temp, "UTF-8")
@@ -490,11 +502,14 @@ generateFilesContents(folderPath) {
         }
     }
 
+
     if (fileArray.Length = 0) {
         fileList := "[Aviso No Hay Archivos que Coincidan con las Extensiones Permitidas]"
     } else {
         for index, relativePath in fileArray {
             try {
+                fileExtension := getFileExtension(relativePath)
+
                 fileContents := FileRead(folderPath "\" relativePath, "UTF-8")
                 errorFileContents := false
             } catch {
@@ -505,7 +520,7 @@ generateFilesContents(folderPath) {
             if (errorFileContents)
                 fileList .= "#### Archivo '" relativePath "' [Error Lectura del archivo]"
             else
-                fileList .= "#### Archivo '" relativePath "': `n" fileContents
+                fileList .= "#### Archivo '" relativePath "': `n````````" fileExtension " `n" fileContents "`n````````"
 
             if (index < fileArray.Length) {
                 fileList .= "`n`n"
@@ -576,12 +591,12 @@ mergeFiles() {
         }
     }
 
-    ; Escribir el contenido combinado en output.tree
+    ; Escribir el contenido combinado en `output`
     try {
         fileDel(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en output.tree.", "Error")
+        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en " output ".", "Error")
         return
     }
 

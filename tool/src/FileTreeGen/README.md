@@ -26,7 +26,7 @@ La estructura de archivos del proyecto es la siguiente:
 FileTreeGen
 │   AllowedExtensions.txt
 │   FileTreeGen.ah2
-│   output.tree
+│   output.md
 │   README.md
 │
 ├───bin
@@ -41,13 +41,14 @@ FileTreeGen
         │       a.txt
         │
         ├───b
-        │       b.txt
+        │       b.md
         │
         ├───c
         │       c.exe
         │
         └───d
-                d.txt
+                d.js
+
 ```
 
 ### Contenido de los Archivos
@@ -143,33 +144,47 @@ Para ejecutar el programa, tiene dos opciones:
 
 1. **Seleccione una Carpeta**: Puede arrastrar una carpeta a la GUI o seleccionarla manualmente utilizando el botón "Seleccionar Carpeta".
 2. **Generar Estructura y Contenido**: Asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según lo que desea generar.
-3. **Resultado**: El resultado se combinará en un archivo `output.tree` y se copiará al portapapeles para facilitar su uso.
+3. **Resultado**: El resultado se combinará en un archivo `output.md` y se copiará al portapapeles para facilitar su uso. La salida del texto está en formato Markdown, incluyendo al copiarse en el portapapeles.
 
 ### Archivos de Ejemplo
 
 Ejemplos de archivos de prueba ubicados en la carpeta `tests`:
 
-```
+`````markdown
 #### Archivo '1\1.txt':
-Archivo 1
-line 2
-line 3
+
+```txt
+File in the main path
+```
 
 #### Archivo '1\a\a.txt':
-Archivo a
-line 2
-line 3
 
-#### Archivo '1\b\b.txt':
-Archivo b
-line 2
-line 3
-
-#### Archivo '1\d\d.txt':
-Archivo d
-line 2
-line 3
+```txt
+Line 1
+Line 2
+Text Text
 ```
+
+#### Archivo '1\b\b.md':
+
+````md
+##### Line 1
+
+##### Line 2
+
+```
+MarkDown code
+```
+````
+
+#### Archivo '1\d\d.js':
+
+```js
+console.log("Line 1");
+console.log("Line 2");
+// JavaScript comment
+```
+`````
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.
 
