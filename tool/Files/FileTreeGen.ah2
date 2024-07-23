@@ -211,7 +211,7 @@ normalizePath(path) {
  */
 validateFolder(path) {
     if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
-        showTopMsgBox("Error", "Por favor, ingrese una ruta de carpeta válida.", "Error")
+        showTopMsgBox("Ruta de Carpeta Inválida", "Por favor, ingrese una ruta de carpeta válida.", "Error")
         return false
     }
     return path
@@ -251,7 +251,7 @@ hasValue(list, value) {
  */
 loadAllowedExtensions(filePath) {
     if !FileExist(filePath) {
-        showTopMsgBox("Error", "El archivo de extensiones permitidas no existe.", "Error")
+        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe.", "Error")
         return []
     }
     extensions := []
@@ -324,7 +324,7 @@ init() {
 checkIfGenerating() {
     global isGenerating
     if (isGenerating) {
-        showTopMsgBox("Advertencia", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning")
+        showTopMsgBox("Proceso de Generación en Curso", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning")
         return true
     }
     return false
@@ -433,7 +433,7 @@ generateFilesContents(folderPath) {
     fileList := ""
     allowedExtensions := loadAllowedExtensions(fileExtents) ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
-        showTopMsgBox("Error", "No se encontraron extensiones permitidas.", "Error")
+        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas.", "Error")
         return
     }
 
@@ -509,7 +509,7 @@ mergeFiles() {
                 outputContent .= spacer
             }
         } catch {
-            showTopMsgBox("Error", "No se pudo leer dirTree.tmp.", "Error")
+            showTopMsgBox("Error al Leer Archivo de Árbol de Directorios", "No se pudo leer dirTree.tmp.", "Error")
         }
     }
 
@@ -519,7 +519,7 @@ mergeFiles() {
             fileContents := FileRead(temp2, "UTF-8")
             outputContent .= "### Contenido de los Archivos:`n" fileContents
         } catch {
-            showTopMsgBox("Error", "No se pudo leer filesContents.tmp.", "Error")
+            showTopMsgBox("Error al Leer Archivo de Contenido de Archivos", "No se pudo leer filesContents.tmp.", "Error")
         }
     }
 
@@ -528,7 +528,7 @@ mergeFiles() {
         fileDel(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("Error", "No se pudo escribir en output.tree.", "Error")
+        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en output.tree.", "Error")
         return
     }
 
@@ -541,11 +541,11 @@ mergeFiles() {
     ClipWait(1, 0)
     A_Clipboard := outputContent
     if !ClipWait(2) {
-        showTopMsgBox("Error", "El intento de copiar texto al portapapeles falló.", "Error")
+        showTopMsgBox("Error al Copiar al Portapapeles", "El intento de copiar texto al portapapeles falló.", "Error")
         return
     }
 
-    showTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
+    showTopMsgBox("Información Copiada", "Información copiada al portapapeles.", "Info")
 }
 
 
