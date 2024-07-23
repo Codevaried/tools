@@ -18,6 +18,7 @@
  * @autor Eloy Navarro Escarabajal
  */
 
+
 ;todo---SECTION: GLOBAL VARIABLES
 
 /**
@@ -50,6 +51,7 @@ global tempFiles := {
  */
 global isGenerating := false
 
+
 ;todo---SECTION: Environment configuration
 
 A_MaxHotkeysPerInterval := 1000
@@ -58,10 +60,12 @@ ListLines 0
 SetWinDelay 0
 SetKeyDelay -1, -1
 
+
 ;todo---SECTION: Development Hotkeys
 
 ;! Uso solo para modo desarollo
 ~^s:: Reload ; Guardar y recargar el script
+
 
 ;todo---SECTION: GUI Management
 
@@ -111,16 +115,38 @@ ensureOneCheckboxChecked(*) {
 }
 
 /**
- * * Selecciona una carpeta mediante un diálogo.
+ * * Selecciona una carpeta mediante un diálogo y lo mantiene en la parte superior.
  */
 selectFolder(*) {
     global folderEdit
     if (checkIfGenerating())
         return
-    folderPath := DirSelect()
+
+    ; Configurar el temporizador para asegurarse de que el diálogo se mantenga siempre en la parte superior
+    SetTimer MakeTopmost, 50
+
+    ; Crear el diálogo de selección de carpeta
+    folderPath := FileSelect("D", "", "Seleccione una carpeta")
+
+    ; Desactivar el temporizador después de cerrar el diálogo
+    SetTimer MakeTopmost, 0
+
+    ; Verificar si se seleccionó una carpeta
     if (folderPath) {
         folderEdit.Value := normalizePath(folderPath)
         processFolder(folderEdit.Value)
+    }
+
+    return
+}
+
+/**
+ * * Subrutina que establece el diálogo como siempre en la parte superior.
+ */
+MakeTopmost(*) {
+    hwnd := WinExist("Seleccione una carpeta ahk_class #32770")
+    if hwnd {
+        DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_TOPMOST = -1, SWP_NOMOVE = 0x0002, SWP_NOSIZE = 0x0001
     }
 }
 
@@ -149,15 +175,16 @@ guiDropFiles(thisGui, ctrl, fileArray, *) {
  * @param {HWND} hwnd - El identificador de la ventana.
  */
 WM_KeyDown(wParam, lParam, msg, hwnd) {
-    global folderEdit
+    global NAME_PROGRAM, folderEdit
     if (checkIfGenerating())
         return
     if (wParam = 0x0D) { ; Código de la tecla Enter
-        if (WinActive("Generador de Árbol de Archivos")) {
+        if (WinActive(NAME_PROGRAM)) {
             processFolder(folderEdit.Value)
         }
     }
 }
+
 
 ;todo---SECTION: Utility Functions
 
@@ -270,8 +297,8 @@ showTopMsgBox(title, message, type := "Info") {
     MsgBox(message, title, icon | 0x40000)
 }
 
-;todo---SECTION: Process Management
 
+;todo---SECTION: Process Management
 
 /**
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
@@ -348,6 +375,7 @@ checkAndGenerateFilesContents(folderPath) {
     }
 }
 
+
 ;todo---SECTION: Directory Tree Generation
 
 /**
@@ -388,6 +416,7 @@ generateDirectoryTree(folderPath) {
     fileDel(temp)
     FileAppend(fileTreeNew, temp, "UTF-8")
 }
+
 
 ;todo---SECTION: Files Contents Generation
 
@@ -444,6 +473,7 @@ generateFilesContents(folderPath) {
     fileDel(temp)
     FileAppend(fileList, temp, "UTF-8")
 }
+
 
 ;todo---SECTION: File Management
 
@@ -517,6 +547,7 @@ mergeFiles() {
 
     showTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
 }
+
 
 ;* Inicializa el programa.
 init()
