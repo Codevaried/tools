@@ -14,13 +14,19 @@ SetKeyDelay -1, -1
 ;! Uso solo para modo desarollo
 ~^s:: Reload ; Guardar y recargar el script
 
-global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
+;* Crear el objeto con los nombres de los archivos requeridos
+global requiredFiles := {
+    extents: "AllowedExtensions.txt",
+}
 
-; Crear el objeto con las propiedades directoryTree y filesContents
+;* Crear el objeto con las propiedades directoryTree y filesContents
 global tempFiles := {
     dirTree: generateTempFileName("tree_output"),
-    filesContents: generateTempFileName("filesContents_output")
+    filesContents: generateTempFileName("filesContents_output"),
+    output: "output.tree"
 }
+
+global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
 
 /**
  * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
@@ -258,11 +264,13 @@ loadAllowedExtensions(filePath) {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 generateFilesContents(folderPath) {
-    global tempFiles
+    global tempFiles, requiredFiles
+
     temp := tempFiles.filesContents
+    fileExtents := requiredFiles.extents
 
     fileList := ""
-    allowedExtensions := loadAllowedExtensions("AllowedExtensions.txt") ; Cargar extensiones permitidas desde archivo
+    allowedExtensions := loadAllowedExtensions(fileExtents) ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
         showTopMsgBox("Error", "No se encontraron extensiones permitidas.", "Error")
         return
@@ -325,6 +333,7 @@ mergeFiles() {
     global tempFiles
     temp1 := tempFiles.dirTree
     temp2 := tempFiles.filesContents
+    output := tempFiles.output
 
     outputContent := ""
     spacer := "`n`n"
@@ -354,8 +363,8 @@ mergeFiles() {
 
     ; Escribir el contenido combinado en output.tree
     try {
-        fileDel("output.tree")
-        FileAppend(outputContent, "output.tree", "UTF-8")
+        fileDel(output)
+        FileAppend(outputContent, output, "UTF-8")
     } catch {
         showTopMsgBox("Error", "No se pudo escribir en output.tree.", "Error")
         return
