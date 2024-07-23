@@ -4,6 +4,8 @@ md
 csv
 log
 ini
+rtf
+tex
 
 # Lenguajes de programación
 ahk
@@ -21,6 +23,7 @@ php
 sh
 bat
 ps1
+sql
 
 # Archivos de configuración y otros
 conf

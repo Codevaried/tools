@@ -462,22 +462,26 @@ generateFilesContents(folderPath) {
         }
     }
 
-    for index, relativePath in fileArray {
-        try {
-            fileContents := FileRead(folderPath "\" relativePath, "UTF-8")
-            errorFileContents := false
-        } catch {
-            fileContents := ""
-            errorFileContents := true
-        }
+    if (fileArray.Length = 0) {
+        fileList := "[Aviso No Hay Archivos que Coincidan con las Extensiones Permitidas]"
+    } else {
+        for index, relativePath in fileArray {
+            try {
+                fileContents := FileRead(folderPath "\" relativePath, "UTF-8")
+                errorFileContents := false
+            } catch {
+                fileContents := ""
+                errorFileContents := true
+            }
 
-        if (errorFileContents)
-            fileList .= "Archivo '" relativePath "' [Error Lectura del archivo]"
-        else
-            fileList .= "Archivo '" relativePath "': `n" fileContents
+            if (errorFileContents)
+                fileList .= "Archivo '" relativePath "' [Error Lectura del archivo]"
+            else
+                fileList .= "Archivo '" relativePath "': `n" fileContents
 
-        if (index < fileArray.Length) {
-            fileList .= "`n`n"
+            if (index < fileArray.Length) {
+                fileList .= "`n`n"
+            }
         }
     }
 
