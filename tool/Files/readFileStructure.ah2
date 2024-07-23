@@ -16,6 +16,12 @@ SetKeyDelay -1, -1
 
 global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
 
+; Crear el objeto con las propiedades directoryTree y filesContents
+global tempFiles := {
+    dirTree: generateTempFileName("tree_output"),
+    filesContents: generateTempFileName("filesContents_output")
+}
+
 /**
  * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
@@ -138,7 +144,6 @@ processFolder(folderPath) {
     global isGenerating
     if (checkIfGenerating())
         return
-    ; SoundBeep()
     isGenerating := true
 
     ; Normalizar la ruta
@@ -150,7 +155,7 @@ processFolder(folderPath) {
 
     checkAndGenerateDirectoryTree(folderPath)
     checkAndGenerateFilesContents(folderPath)
-    copyToClipboard()
+    mergeFiles()
     isGenerating := false
 }
 
@@ -181,9 +186,10 @@ checkAndGenerateFilesContents(folderPath) {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 generateDirectoryTree(folderPath) {
-
+    global tempFiles
+    temp := tempFiles.dirTree
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" folderPath "' | Out-File -FilePath tree_output.tree -Encoding utf8}"
+    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" folderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
     RunWait(command, , "Hide")
     if (A_LastError) {
         MsgBox("+AlwaysOnTop Error al generar el árbol de archivos. Por favor, intente nuevamente.")
@@ -191,7 +197,7 @@ generateDirectoryTree(folderPath) {
     }
 
     ; Leer el archivo de salida y eliminar las dos primeras líneas
-    fileTree := FileRead("tree_output.tree", "UTF-8")
+    fileTree := FileRead(temp, "UTF-8")
     fileTreeArray := StrSplit(fileTree, "`n")
     ; Eliminar las dos primeras líneas
     fileTreeArray.RemoveAt(1)
@@ -210,11 +216,8 @@ generateDirectoryTree(folderPath) {
         }
     }
     ; Reescribir el archivo con las modificaciones
-    FileDelete("tree_output.tree")
-    FileAppend(fileTreeNew, "tree_output.tree", "UTF-8")
-
-    ; Mostrar mensaje de confirmación
-    ; MsgBox("Árbol de archivos guardado en tree_output.tree")
+    fileDel(temp)
+    FileAppend(fileTreeNew, temp, "UTF-8")
 }
 
 /**
@@ -255,6 +258,9 @@ loadAllowedExtensions(filePath) {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 generateFilesContents(folderPath) {
+    global tempFiles
+    temp := tempFiles.filesContents
+
     fileList := ""
     allowedExtensions := loadAllowedExtensions("AllowedExtensions.txt") ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
@@ -295,39 +301,79 @@ generateFilesContents(folderPath) {
     }
 
     ; Escribir los contenidos en un archivo de salida
-    if FileExist("files_contents_output.txt")
-        FileDelete("files_contents_output.txt")
-    FileAppend(fileList, "files_contents_output.txt", "UTF-8")
-
-    ; Mostrar mensaje de confirmación
-    ; MsgBox("Contenido de los archivos guardado en files_contents_output.txt")
+    fileDel(temp)
+    FileAppend(fileList, temp, "UTF-8")
 }
 
 /**
- * Copia la información generada al portapapeles según los checkboxes seleccionados.
+ * Elimina un archivo si existe.
+ * @param {string} file - La ruta del archivo a eliminar.
  */
-copyToClipboard() {
+fileDel(file) {
+    if FileExist(file)
+        FileDelete(file)
+}
+
+/**
+ * Une los archivos dirTree.tmp y filesContents.tmp en uno solo según los checkboxes activados.
+ * Elimina los archivos intermedios y copia el contenido final al portapapeles.
+ */
+mergeFiles() {
     global directoryTreeCheckbox, fileContentsCheckbox
-    Clipboard := ""  ; Limpia el portapapeles
-    ClipWait(1, 0)  ; Espera hasta que el portapapeles esté vacío, con un timeout de 1 segundo
 
-    ; Genera el contenido a copiar
-    clipboardContent := ""
+
+    global tempFiles
+    temp1 := tempFiles.dirTree
+    temp2 := tempFiles.filesContents
+
+    outputContent := ""
+    spacer := "`n`n"
+
+    ; Agregar el contenido del árbol de directorios si está seleccionado
     if (directoryTreeCheckbox.Value) {
-        fileTree := FileRead("tree_output.tree", "UTF-8")
-        clipboardContent .= "### Estructura de Archivos:`n" fileTree "`n`n"
-    }
-    if (fileContentsCheckbox.Value) {
-        fileContents := FileRead("files_contents_output.txt", "UTF-8")
-        clipboardContent .= "### Contenido de los Archivos:`n" fileContents "`n`n"
+        try {
+            fileTree := FileRead(temp1, "UTF-8")
+            outputContent .= "### Estructura de Archivos:`n" fileTree
+            if (fileContentsCheckbox.Value) {
+                outputContent .= spacer
+            }
+        } catch {
+            showTopMsgBox("Error", "No se pudo leer dirTree.tmp.", "Error")
+        }
     }
 
-    ; Asigna el contenido al portapapeles
-    A_Clipboard := clipboardContent
+    ; Agregar el contenido de los archivos si está seleccionado
+    if (fileContentsCheckbox.Value) {
+        try {
+            fileContents := FileRead(temp2, "UTF-8")
+            outputContent .= "### Contenido de los Archivos:`n" fileContents
+        } catch {
+            showTopMsgBox("Error", "No se pudo leer filesContents.tmp.", "Error")
+        }
+    }
+
+    ; Escribir el contenido combinado en output.tree
+    try {
+        fileDel("output.tree")
+        FileAppend(outputContent, "output.tree", "UTF-8")
+    } catch {
+        showTopMsgBox("Error", "No se pudo escribir en output.tree.", "Error")
+        return
+    }
+
+    ; Eliminar archivos intermedios
+    fileDel(temp1)
+    fileDel(temp2)
+
+    ; Copiar el contenido final al portapapeles
+    Clipboard := ""
+    ClipWait(1, 0)
+    Clipboard := outputContent
     if !ClipWait(2) {
         showTopMsgBox("Error", "El intento de copiar texto al portapapeles falló.", "Error")
         return
     }
+
     showTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
 }
 
@@ -364,6 +410,16 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
             processFolder(folderEdit.Value)
         }
     }
+}
+
+/**
+ * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
+ * @param {string} prefix - El prefijo para el nombre del archivo.
+ * @return {string} - El nombre del archivo temporal generado.
+ */
+generateTempFileName(prefix) {
+    randomNumber := Random(100000, 999999)
+    return prefix "-" randomNumber ".tmp"
 }
 
 /**
