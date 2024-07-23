@@ -32,7 +32,7 @@ global NAME_PROGRAM := "FileTreeGen (Generación del árbol de archivos)"
  * @global {object}
  */
 global requiredFiles := {
-    extents: "AllowedExtensions.txt",  ; Archivo que contiene las extensiones permitidas
+    extents: "AllowedExtensions.txt", ; Archivo que contiene las extensiones permitidas
 }
 
 /**
@@ -40,9 +40,9 @@ global requiredFiles := {
  * @global {object}
  */
 global tempFiles := {
-    dirTree: generateTempFileName("tree_output"),  ; Archivo temporal para el árbol de directorios
-    filesContents: generateTempFileName("filesContents_output"),  ; Archivo temporal para los contenidos de archivos
-    output: "output.tree"  ; Archivo de salida combinado
+    dirTree: generateTempFileName("tree_output"), ; Archivo temporal para el árbol de directorios
+    filesContents: generateTempFileName("filesContents_output"), ; Archivo temporal para los contenidos de archivos
+    output: "output.tree" ; Archivo de salida combinado
 }
 
 /**
@@ -64,7 +64,9 @@ SetKeyDelay -1, -1
 ;todo---SECTION: Development Hotkeys
 
 ;! Uso solo para modo desarollo
-~^s:: Reload ; Guardar y recargar el script
+#HotIf !A_IsCompiled
+^s:: Reload ; Guardar y recargar el script
+#HotIf
 
 
 ;todo---SECTION: GUI Management
@@ -100,8 +102,18 @@ createGui() {
     ; Configurar la captura de la tecla Enter
     OnMessage(0x0100, WM_KeyDown)
 
+    ; Configurar el evento de cierre de la GUI para finalizar el programa
+    myGui.OnEvent("Close", closeProgram)
+
     ; Mostrar la GUI centrada
     myGui.Show("AutoSize Center")
+}
+
+/**
+ * * Maneja el cierre del programa.
+ */
+closeProgram(*) {
+    ExitApp
 }
 
 /**
