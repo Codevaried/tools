@@ -28,6 +28,8 @@ global tempFiles := {
 
 global isGenerating := false ; Bandera para evitar ejecuciones concurrentes
 
+;? section: GUI Management
+
 /**
  * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
@@ -88,6 +90,43 @@ selectFolder(*) {
 }
 
 /**
+ * Maneja el evento de arrastre de archivos a la GUI.
+ * @param {object} thisGui - La GUI donde se soltaron los archivos.
+ * @param {object} ctrl - El control donde se soltaron los archivos.
+ * @param {array} fileArray - Lista de archivos arrastrados.
+ */
+guiDropFiles(thisGui, ctrl, fileArray, *) {
+    global folderEdit
+    if (checkIfGenerating())
+        return
+    folderPath := normalizePath(fileArray[1])
+    if (folderPath) { ; Verificar si la ruta es válida
+        folderEdit.Value := folderPath
+        processFolder(folderEdit.Value)
+    }
+}
+
+/**
+ * Maneja el evento de tecla presionada.
+ * @param {WPARAM} wParam - El código de la tecla presionada.
+ * @param {LPARAM} lParam - Información adicional sobre la tecla presionada.
+ * @param {MSG} msg - El mensaje de la tecla presionada.
+ * @param {HWND} hwnd - El identificador de la ventana.
+ */
+WM_KeyDown(wParam, lParam, msg, hwnd) {
+    global folderEdit
+    if (checkIfGenerating())
+        return
+    if (wParam = 0x0D) { ; Código de la tecla Enter
+        if (WinActive("Generador de Árbol de Archivos")) {
+            processFolder(folderEdit.Value)
+        }
+    }
+}
+
+;? section: Utility Functions
+
+/**
  * Normaliza una ruta de archivo reemplazando todas las barras "/" con "\" y eliminando cualquier barra inicial o final.
  * @param {string} path - La ruta a normalizar.
  * @return {string} - La ruta normalizada.
@@ -128,6 +167,75 @@ getMainFolderName(folderPath) {
     SetWorkingDir(originalDir)
     return mainFolder
 }
+
+/**
+ * Verifica si un valor está en una lista.
+ * @param {Array} list - La lista a verificar.
+ * @param {string} value - El valor a buscar.
+ * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
+ */
+hasValue(list, value) {
+    for item in list {
+        if (item = value)
+            return true
+    }
+    return false
+}
+
+/**
+ * Lee las extensiones permitidas desde un archivo.
+ * @param {string} filePath - La ruta del archivo que contiene las extensiones permitidas.
+ * @return {Array} - Una lista de extensiones permitidas.
+ */
+loadAllowedExtensions(filePath) {
+    if !FileExist(filePath) {
+        showTopMsgBox("Error", "El archivo de extensiones permitidas no existe.", "Error")
+        return []
+    }
+    extensions := []
+    Loop Read, filePath {
+        extension := Trim(A_LoopReadLine)
+        if (extension != "" && SubStr(extension, 1, 1) != "#") ; Ignorar comentarios y líneas vacías
+            extensions.Push(extension)
+    }
+    return extensions
+}
+
+/**
+ * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
+ * @param {string} prefix - El prefijo para el nombre del archivo.
+ * @return {string} - El nombre del archivo temporal generado.
+ */
+generateTempFileName(prefix) {
+    randomNumber := Random(100000, 999999)
+    return prefix "-" randomNumber ".tmp"
+}
+
+/**
+ * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
+ * @param {string} title - El título del MsgBox.
+ * @param {string} message - El mensaje a mostrar en el MsgBox.
+ * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
+ */
+showTopMsgBox(title, message, type := "Info") {
+    ; Determinar el ícono basado en el tipo de mensaje
+    switch type {
+        case "Error":
+            icon := 0x10 ; Ícono de error
+        case "Warning":
+            icon := 0x30 ; Ícono de advertencia
+        case "Info":
+            icon := 0x40 ; Ícono de información
+        case "Question":
+            icon := 0x20 ; Ícono de pregunta
+        default:
+            icon := 0x40 ; Ícono de información por defecto
+    }
+    ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
+    MsgBox(message, title, icon | 0x40000)
+}
+
+;? section: Process Management
 
 /**
  * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
@@ -187,6 +295,8 @@ checkAndGenerateFilesContents(folderPath) {
     }
 }
 
+;? section: Directory Tree Generation
+
 /**
  * Genera el árbol de archivos de la carpeta seleccionada.
  * @param {string} folderPath - La ruta de la carpeta.
@@ -226,38 +336,7 @@ generateDirectoryTree(folderPath) {
     FileAppend(fileTreeNew, temp, "UTF-8")
 }
 
-/**
- * Verifica si un valor está en una lista.
- * @param {Array} list - La lista a verificar.
- * @param {string} value - El valor a buscar.
- * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
- */
-hasValue(list, value) {
-    for item in list {
-        if (item = value)
-            return true
-    }
-    return false
-}
-
-/**
- * Lee las extensiones permitidas desde un archivo.
- * @param {string} filePath - La ruta del archivo que contiene las extensiones permitidas.
- * @return {Array} - Una lista de extensiones permitidas.
- */
-loadAllowedExtensions(filePath) {
-    if !FileExist(filePath) {
-        showTopMsgBox("Error", "El archivo de extensiones permitidas no existe.", "Error")
-        return []
-    }
-    extensions := []
-    Loop Read, filePath {
-        extension := Trim(A_LoopReadLine)
-        if (extension != "" && SubStr(extension, 1, 1) != "#") ; Ignorar comentarios y líneas vacías
-            extensions.Push(extension)
-    }
-    return extensions
-}
+;? section: Files Contents Generation
 
 /**
  * Genera el contenido de los archivos de la carpeta seleccionada.
@@ -313,6 +392,8 @@ generateFilesContents(folderPath) {
     FileAppend(fileList, temp, "UTF-8")
 }
 
+;? section: File Management
+
 /**
  * Elimina un archivo si existe.
  * @param {string} file - La ruta del archivo a eliminar.
@@ -327,10 +408,8 @@ fileDel(file) {
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
 mergeFiles() {
-    global directoryTreeCheckbox, fileContentsCheckbox
+    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles
 
-
-    global tempFiles
     temp1 := tempFiles.dirTree
     temp2 := tempFiles.filesContents
     output := tempFiles.output
@@ -375,9 +454,9 @@ mergeFiles() {
     fileDel(temp2)
 
     ; Copiar el contenido final al portapapeles
-    Clipboard := ""
+    A_Clipboard := ""
     ClipWait(1, 0)
-    Clipboard := outputContent
+    A_Clipboard := outputContent
     if !ClipWait(2) {
         showTopMsgBox("Error", "El intento de copiar texto al portapapeles falló.", "Error")
         return
@@ -386,73 +465,5 @@ mergeFiles() {
     showTopMsgBox("Información", "Información copiada al portapapeles.", "Info")
 }
 
-/**
- * Maneja el evento de arrastre de archivos a la GUI.
- * @param {object} thisGui - La GUI donde se soltaron los archivos.
- * @param {object} ctrl - El control donde se soltaron los archivos.
- * @param {array} fileArray - Lista de archivos arrastrados.
- */
-guiDropFiles(thisGui, ctrl, fileArray, *) {
-    global folderEdit
-    if (checkIfGenerating())
-        return
-    folderPath := normalizePath(fileArray[1])
-    if (folderPath) { ; Verificar si la ruta es válida
-        folderEdit.Value := folderPath
-        processFolder(folderEdit.Value)
-    }
-}
-
-/**
- * Maneja el evento de tecla presionada.
- * @param {WPARAM} wParam - El código de la tecla presionada.
- * @param {LPARAM} lParam - Información adicional sobre la tecla presionada.
- * @param {MSG} msg - El mensaje de la tecla presionada.
- * @param {HWND} hwnd - El identificador de la ventana.
- */
-WM_KeyDown(wParam, lParam, msg, hwnd) {
-    global folderEdit
-    if (checkIfGenerating())
-        return
-    if (wParam = 0x0D) { ; Código de la tecla Enter
-        if (WinActive("Generador de Árbol de Archivos")) {
-            processFolder(folderEdit.Value)
-        }
-    }
-}
-
-/**
- * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
- * @param {string} prefix - El prefijo para el nombre del archivo.
- * @return {string} - El nombre del archivo temporal generado.
- */
-generateTempFileName(prefix) {
-    randomNumber := Random(100000, 999999)
-    return prefix "-" randomNumber ".tmp"
-}
-
-/**
- * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
- * @param {string} title - El título del MsgBox.
- * @param {string} message - El mensaje a mostrar en el MsgBox.
- * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
- */
-showTopMsgBox(title, message, type := "Info") {
-    ; Determinar el ícono basado en el tipo de mensaje
-    switch type {
-        case "Error":
-            icon := 0x10 ; Ícono de error
-        case "Warning":
-            icon := 0x30 ; Ícono de advertencia
-        case "Info":
-            icon := 0x40 ; Ícono de información
-        case "Question":
-            icon := 0x20 ; Ícono de pregunta
-        default:
-            icon := 0x40 ; Ícono de información por defecto
-    }
-    ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
-    MsgBox(message, title, icon | 0x40000)
-}
-
+; Inicializar la GUI
 createGui()
