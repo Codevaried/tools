@@ -117,6 +117,7 @@ createGui() {
  * * Maneja el cierre del programa.
  */
 closeProgram(*) {
+    clearTemp()
     ExitApp
 }
 
@@ -227,7 +228,7 @@ normalizePath(path) {
  */
 validateFolder(path) {
     if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
-        showTopMsgBox("Ruta de Carpeta Inválida", "Por favor, ingrese una ruta de carpeta válida.", "Error")
+        showTopMsgBox("Ruta de Carpeta Inválida", "Por favor, ingrese una ruta de carpeta válida.", "Error", true)
         return false
     }
     return path
@@ -277,7 +278,7 @@ getFileExtension(filePath) {
  */
 loadAllowedExtensions(filePath) {
     if !FileExist(filePath) {
-        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe. Asegúrese de que '" filePath "' está en el directorio correcto y contiene las extensiones válidas, una por línea.", "Error")
+        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe. Asegúrese de que '" filePath "' está en el directorio correcto y contiene las extensiones válidas, una por línea.", "Error", true)
         return []
     }
     extensions := []
@@ -304,8 +305,9 @@ generateTempFileName(prefix) {
  * @param {string} title - El título del MsgBox.
  * @param {string} message - El mensaje a mostrar en el MsgBox.
  * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
+ * @param {boolean} async - Si es verdadero, muestra el MsgBox asincrónicamente.
  */
-showTopMsgBox(title, message, type := "Info") {
+showTopMsgBox(title, message, type := "Info", async := false) {
     ; Determinar el ícono basado en el tipo de mensaje
     switch type {
         case "Error":
@@ -319,8 +321,14 @@ showTopMsgBox(title, message, type := "Info") {
         default:
             icon := 0x40 ; Ícono de información por defecto
     }
-    ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
-    MsgBox(message, title, icon | 0x40000)
+
+    ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
+    if async {
+        SetTimer (() => MsgBox(message, title, icon | 0x40000)), -1
+    } else {
+        ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
+        MsgBox(message, title, icon | 0x40000)
+    }
 }
 
 
@@ -336,7 +344,7 @@ init() {
     if (!FileExist(fileExtents)) {
         message := "El archivo requerido '" fileExtents "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco."
         showTopMsgBox("Archivo Requerido No Encontrado", message, "Error")
-        ExitApp 1
+        ExitApp(1)
     }
 
     ; Inicializar la GUI
@@ -350,7 +358,7 @@ init() {
 checkIfGenerating() {
     global isGenerating
     if (isGenerating) {
-        showTopMsgBox("Proceso de Generación en Curso", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning")
+        showTopMsgBox("Proceso de Generación en Curso", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning", true)
         return 1
     }
 }
@@ -485,7 +493,7 @@ generateFilesContents(folderPath) {
     fileList := ""
     allowedExtensions := loadAllowedExtensions(fileExtents) ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
-        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileExtents "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "Error")
+        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileExtents "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "Error", true)
         return 1
     }
 
@@ -518,9 +526,9 @@ generateFilesContents(folderPath) {
             }
 
             if (errorFileContents)
-                fileList .= "#### Archivo '" relativePath "' [Error Lectura del archivo]"
+                fileList .= "#### Archivo ``" relativePath "`` **[Error Lectura del archivo]**"
             else
-                fileList .= "#### Archivo '" relativePath "': `n````````" fileExtension " `n" fileContents "`n````````"
+                fileList .= "#### Archivo ``" relativePath "``: `n````````" fileExtension " `n" fileContents "`n````````"
 
             if (index < fileArray.Length) {
                 fileList .= "`n`n"
@@ -577,7 +585,7 @@ mergeFiles() {
                 outputContent .= spacer
             }
         } catch {
-            showTopMsgBox("Error al Leer Archivo de Árbol de Directorios", "No se pudo leer dirTree.tmp.", "Error")
+            showTopMsgBox("Error al Leer Archivo de Árbol de Directorios", "No se pudo leer dirTree.tmp.", "Error", true)
         }
     }
 
@@ -587,7 +595,7 @@ mergeFiles() {
             fileContents := FileRead(temp2, "UTF-8")
             outputContent .= "### Contenido de los Archivos:`n" fileContents
         } catch {
-            showTopMsgBox("Error al Leer Archivo de Contenido de Archivos", "No se pudo leer filesContents.tmp.", "Error")
+            showTopMsgBox("Error al Leer Archivo de Contenido de Archivos", "No se pudo leer filesContents.tmp.", "Error", true)
         }
     }
 
@@ -596,7 +604,7 @@ mergeFiles() {
         fileDel(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en " output ".", "Error")
+        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en " output ".", "Error", true)
         return
     }
 
@@ -605,11 +613,11 @@ mergeFiles() {
     ClipWait(1, 0)
     A_Clipboard := outputContent
     if !ClipWait(2) {
-        showTopMsgBox("Error al Copiar al Portapapeles", "El intento de copiar texto al portapapeles falló.", "Error")
+        showTopMsgBox("Error al Copiar al Portapapeles", "El intento de copiar texto al portapapeles falló.", "Error", true)
         return
     }
 
-    showTopMsgBox("Información Copiada", "Información copiada al portapapeles.", "Info")
+    showTopMsgBox("Información Copiada", "Información copiada al portapapeles.", "Info", true)
 }
 
 
