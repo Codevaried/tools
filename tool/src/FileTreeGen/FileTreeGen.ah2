@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0.18
 #SingleInstance Force
 /*@Ahk2Exe-Keep
 #NoTrayIcon
@@ -22,22 +22,34 @@
 ;todo---SECTION: GLOBAL VARIABLES
 
 /**
- * * Nombre del programa. Actualizar con el nombre adecuado.
- * @global {string}
+ * ? Objeto principal que contiene la configuración y metadatos del programa.
+ * @global {Object}
+ * @property {string} name - Nombre del programa.
+ * @property {string} version - Versión del programa. Actualizar con cada cambio.
+ * @property {string} description - Descripción del programa.
+ * @property {string} fullDescription - Combinación del nombre, versión y descripción del programa.
  */
-global NAME_PROGRAM := "FileTreeGen (Generación del árbol de archivos)"
+global PROGRAM := {
+    name: "FileTreeGen",
+    version: "v1.1",
+    description: "File Tree Generation",
+    fullDescription: ""
+}
+
+; Inicializar fullDescription
+PROGRAM.fullDescription := PROGRAM.name " " PROGRAM.version " - " PROGRAM.description
 
 /**
- * * Archivos requeridos por el programa.
- * @global {object}
+ * ! Archivos requeridos por el programa.
+ * @global {Object}
  */
 global requiredFiles := {
     extents: "AllowedExtensions.txt", ; Archivo que contiene las extensiones permitidas
 }
 
 /**
- * * Archivos temporales utilizados durante la ejecución del programa.
- * @global {object}
+ * ! Archivos temporales utilizados durante la ejecución del programa.
+ * @global {Object}
  */
 global tempFiles := {
     dirTree: generateTempFileName("tree_output"), ; Archivo temporal para el árbol de directorios
@@ -46,7 +58,7 @@ global tempFiles := {
 }
 
 /**
- * * Bandera para evitar ejecuciones concurrentes.
+ * ; Bandera para evitar ejecuciones concurrentes.
  * @global {boolean}
  */
 global isGenerating := false
@@ -79,8 +91,8 @@ SetKeyDelay -1, -1
  * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 createGui() {
-    global NAME_PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, generateText
-    myGui := Gui("+AlwaysOnTop", NAME_PROGRAM)
+    global PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, generateText
+    myGui := Gui("+AlwaysOnTop", PROGRAM.fullDescription)
     myGui.SetFont("s10", "Segoe UI")
 
     ; Añadir controles a la GUI
@@ -169,8 +181,8 @@ MakeTopmost(*) {
 
 /**
  * * Maneja el evento de arrastre de archivos a la GUI.
- * @param {object} thisGui - La GUI donde se soltaron los archivos.
- * @param {object} ctrl - El control donde se soltaron los archivos.
+ * @param {Object} thisGui - La GUI donde se soltaron los archivos.
+ * @param {Object} ctrl - El control donde se soltaron los archivos.
  * @param {array} fileArray - Lista de archivos arrastrados.
  */
 guiDropFiles(thisGui, ctrl, fileArray, *) {
@@ -192,11 +204,11 @@ guiDropFiles(thisGui, ctrl, fileArray, *) {
  * @param {HWND} hwnd - El identificador de la ventana.
  */
 WM_KeyDown(wParam, lParam, msg, hwnd) {
-    global NAME_PROGRAM, folderEdit
+    global PROGRAM, folderEdit
     if (checkIfGenerating())
         return
     if (wParam = 0x0D) { ; Código de la tecla Enter
-        if (WinActive(NAME_PROGRAM)) {
+        if (WinActive(PROGRAM.fullDescription)) {
             processFolder(folderEdit.Value)
         }
     }
@@ -512,7 +524,7 @@ generateFilesContents(folderPath) {
 
 
     if (fileArray.Length = 0) {
-        fileList := "[Aviso No Hay Archivos que Coincidan con las Extensiones Permitidas]"
+        fileList := "**[Aviso No Hay Archivos que Coincidan con las Extensiones Permitidas]**"
     } else {
         for index, relativePath in fileArray {
             try {
