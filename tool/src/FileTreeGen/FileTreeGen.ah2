@@ -324,7 +324,7 @@ showTopMsgBox(title, message, type := "Info", async := false) {
 
     ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
     if async {
-        SetTimer (() => MsgBox(message, title, icon | 0x40000)), -1
+        SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1)
     } else {
         ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
         MsgBox(message, title, icon | 0x40000)
