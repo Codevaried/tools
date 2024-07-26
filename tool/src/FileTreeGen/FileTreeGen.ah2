@@ -152,7 +152,8 @@ selectFolder(*) {
         return
 
     ; Configurar el temporizador para asegurarse de que el diálogo se mantenga siempre en la parte superior
-    SetTimer MakeTopmost, 50
+    ; SetTimer MakeTopmost, 50
+    SetTimer MakeTopmost, -100
 
     ; Crear el diálogo de selección de carpeta
     folderPath := FileSelect("D", "", "Seleccione una carpeta")
