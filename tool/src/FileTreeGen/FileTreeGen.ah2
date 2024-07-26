@@ -676,23 +676,24 @@ clearTemp() {
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
 mergeFiles() {
-    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles
+    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles, confiFiles
 
-    temp1 := tempFiles.dirTree
-    temp2 := tempFiles.filesContents
+    outputContent := "## Índice (File Tree Generation)`n"
     output := tempFiles.output
-
-    outputContent := ""
     spacer := "`n`n"
+
+    if (directoryTreeCheckbox.Value)
+        outputContent .= "- [Árbol de directorios](#Directory-Tree)`n"
+    if (!fileContentsCheckbox.Value)
+        outputContent .= "`n"
+    if (fileContentsCheckbox.Value)
+        outputContent .= "- [Contenido de los archivos](#Files-Contents)`n`n"
 
     ; Agregar el contenido del árbol de directorios si está seleccionado
     if (directoryTreeCheckbox.Value) {
         try {
-            fileTree := FileRead(temp1, "UTF-8")
-            outputContent .= "### Estructura de Archivos:`n" fileTree
-            if (fileContentsCheckbox.Value) {
-                outputContent .= spacer
-            }
+            fileTree := FileRead(tempFiles.dirTree, "UTF-8")
+            outputContent .= "### Directory Tree:`n" fileTree spacer
         } catch {
             showTopMsgBox("No se pudo leer dirTree.tmp.", "Error al Leer Archivo de Árbol de Directorios", "Error", true)
         }
@@ -701,8 +702,8 @@ mergeFiles() {
     ; Agregar el contenido de los archivos si está seleccionado
     if (fileContentsCheckbox.Value) {
         try {
-            fileContents := FileRead(temp2, "UTF-8")
-            outputContent .= "### Contenido de los Archivos:`n" fileContents
+            fileContents := FileRead(tempFiles.filesContents, "UTF-8")
+            outputContent .= "### Files Contents:`n" fileContents
         } catch {
             showTopMsgBox("No se pudo leer filesContents.tmp.", "Error al Leer Archivo de Contenido de Archivos", "Error", true)
         }
@@ -710,16 +711,14 @@ mergeFiles() {
 
     ; Escribir el contenido combinado en `output`
     try {
-        fileDel(output)
+        FileDelete(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("No se pudo escribir en " output ".", "Error al Escribir Archivo de Salida", "Error", true)
+        showTopMsgBox("No se pudo escribir en `"" output "`".", "Error al Escribir Archivo de Salida", "Error", true)
         return
     }
 
     ; Copiar el contenido final al portapapeles
-    A_Clipboard := ""
-    ClipWait(1, 0)
     A_Clipboard := outputContent
     if !ClipWait(2) {
         showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)

@@ -1,4 +1,8 @@
-﻿### Estructura de Archivos:
+﻿## Índice (File Tree Generation)
+- [Árbol de directorios](#Directory-Tree)
+- [Contenido de los archivos](#Files-Contents)
+
+### Directory Tree:
 ```tree
 tree_tests
 │   1.txt
@@ -21,7 +25,7 @@ tree_tests
 ```
 
 
-### Contenido de los Archivos:
+### Files Contents:
 #### Archivo `1.txt`: 
 ````txt 
 File in the main path

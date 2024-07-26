@@ -3,8 +3,8 @@
 - [Introducción](#introducción)
 - [Funcionalidades Principales](#funcionalidades-principales)
 - [Requisitos](#requisitos)
-- [Estructura de Archivos](#estructura-de-archivos)
-- [Contenido de los Archivos](#contenido-de-los-archivos)
+- [Árbol de directorios](#Directory-Tree)
+- [Contenido de los archivos](#Files-Contents)
   - [FilesContents.conf](#filescontentsconf)
 - [Resumen del Código](#resumen-del-código)
 - [Ejecución del Programa](#ejecución-del-programa)
@@ -31,9 +31,9 @@
 - Archivo `FilesContents.conf` que contiene las extensiones permitidas y archivos ignorados.
 - Carpeta de destino con los archivos a procesar.
 
-### Estructura de Archivos
+### Directory Tree
 
-La estructura de archivos del proyecto es la siguiente:
+El árbol de directorios del proyecto es el siguiente:
 
 ```tree
 FileTreeGen
@@ -75,7 +75,7 @@ FileTreeGen
                 d.js
 ```
 
-### Contenido de los Archivos
+### Files Contents
 
 #### FilesContents.conf
 
