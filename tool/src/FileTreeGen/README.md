@@ -82,21 +82,14 @@ FileTreeGen
 Este archivo contiene la configuración de las extensiones de archivos permitidas y los archivos que deben ser ignorados durante el procesamiento.
 
 ```conf
-#; Condiciones aplicadas al proceso "Files Contents"
+#*** Configuración para el procesamiento de contenidos de archivos
 
-##? ♦ Extensiones de archivos permitidas
-# Esta sección define las extensiones de archivo que son permitidas para su procesamiento.
-# Cada línea contiene una extensión sin el punto inicial.
-# Las extensiones deben estar listadas sin comentarios ni espacios en blanco innecesarios.
-# Se ignoran las líneas que comienzan con "#" y las que contienen un "." (que indican archivos completos).
+##? ♦ Extensiones de Archivos Permitidas
+#; Define las extensiones de archivo permitidas para el procesamiento.
+#; Cada línea debe contener una extensión sin el punto inicial.
+#; Se ignoran las líneas que comienzan con "#" y las que contienen un "." (indicando archivos completos).
 
-#? ♦ Archivos ignorados (Usar rutas completas)
-# Esta sección define los archivos completos que deben ser ignorados durante el procesamiento.
-# Cada línea contiene el nombre completo del archivo junto con su extensión.
-# Se ignoran las líneas que comienzan con "#".
-
-#? ♦ Extensiones de archivos permitidas
-##* Extensiones de Archivos de texto
+###* Extensiones de Archivos de Texto
 txt
 md
 csv
@@ -105,7 +98,7 @@ ini
 rtf
 tex
 
-##* Extensiones de Lenguajes de programación
+###* Extensiones de Lenguajes de Programación
 ahk
 ah2
 py
@@ -124,7 +117,7 @@ bat
 ps1
 sql
 
-##* Extensiones de Archivos de configuración y otros
+###* Extensiones de Archivos de Configuración y Otros
 conf
 cfg
 toml
@@ -132,16 +125,24 @@ yaml
 yml
 properties
 
-#? ♦ Archivos ignorados
-##* Archivo de salida combinado
+##? ♦ Archivos Ignorados (NO Usar Patrones De Archivos)
+#; Define los archivos completos que deben ser ignorados durante el procesamiento.
+#; Cada línea debe contener la ruta completa del archivo junto con su extensión.
+#; Se pueden usar rutas absolutas y relativas.
+#; No se pueden usar patrones de búsqueda o de coincidencia de archivos.
+#; Se ignoran las líneas que comienzan con "#".
+
+###* Archivo de Salida Combinado
 output.md
 
-#? Tests
-##! Extensiones de Archivos de pruebas de la carpeta `files_tests`
+##? Tests
+#; Extensiones y archivos de pruebas que se encuentran en las carpetas `files_tests` y `tree_tests`.
+
+###* Extensiones de Archivos de Pruebas (files_tests)
 #;💹
 # file
 
-##! Archivos de pruebas de la carpeta `files_tests`
+###* Archivos de Pruebas (files_tests)
 #;💹
 # ..file
 # .1.file
@@ -149,13 +150,13 @@ output.md
 # 1..file
 # 1.file
 
-##! Archivos de pruebas de la carpeta `tree_tests`
+###* Archivos de Pruebas (tree_tests)
 #;💹
 # 1.txt
 # 1\d\d.js
-# .\1\d\d.js
+# .\1\..\1\d\d.js
 
-###! ( EN DESAROLLO )
+###! En Desarrollo (Incompatible)
 #;⛔
 # 1\d\*.js
 # 1\d\d.*
