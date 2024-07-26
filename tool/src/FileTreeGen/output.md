@@ -1,8 +1,10 @@
 ﻿### Estructura de Archivos:
 ```tree
-tests
+tree_tests
+│   1.txt
+│   
 └───1
-    │   1.txt
+    │   2.txt
     │   
     ├───a
     │       a.txt
@@ -20,9 +22,14 @@ tests
 
 
 ### Contenido de los Archivos:
-#### Archivo `1\1.txt`: 
+#### Archivo `1.txt`: 
 ````txt 
 File in the main path
+````
+
+#### Archivo `1\2.txt`: 
+````txt 
+File in the secondary path
 ````
 
 #### Archivo `1\a\a.txt`: 

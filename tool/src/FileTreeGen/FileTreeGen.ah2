@@ -31,7 +31,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v1.1",
+    version: "v1.5",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -40,11 +40,11 @@ global PROGRAM := {
 PROGRAM.fullDescription := PROGRAM.name " " PROGRAM.version " - " PROGRAM.description
 
 /**
- * ! Archivos requeridos por el programa.
+ * ! Archivos de configuración del programa.
  * @global {Object}
  */
-global requiredFiles := {
-    extents: "AllowedExtensions.txt", ; Archivo que contiene las extensiones permitidas
+global confiFiles := {
+    filesContents: "FilesContents.conf", ; Archivo de configuracion que contiene las extensiones permitidas y los archivos ignorados en el proceso "Files Contents"
 }
 
 /**
@@ -79,6 +79,7 @@ SetKeyDelay -1, -1
 #HotIf !A_IsCompiled
 ^s:: {
     Send("^s")  ; Simula Ctrl+S para guardar el archivo
+    clearTemp() ; Elimina todos los posibles archivos residuales.
     Sleep(100)  ; Pequeño retraso para asegurar que el archivo se guarde
     Reload()  ; Recarga el script
 }
@@ -147,7 +148,6 @@ ensureOneCheckboxChecked(checkbox) {
  * * Selecciona una carpeta mediante un diálogo y lo mantiene en la parte superior.
  */
 selectFolder(*) {
-    global folderEdit
     if (checkIfGenerating())
         return
 
@@ -160,13 +160,7 @@ selectFolder(*) {
     ; Desactivar el temporizador después de cerrar el diálogo
     SetTimer MakeTopmost, 0
 
-    ; Verificar si se seleccionó una carpeta
-    if (folderPath) {
-        folderEdit.Value := normalizePath(folderPath)
-        processFolder(folderEdit.Value)
-    }
-
-    return
+    processFolder(folderPath)
 }
 
 /**
@@ -186,14 +180,9 @@ MakeTopmost(*) {
  * @param {array} fileArray - Lista de archivos arrastrados.
  */
 guiDropFiles(thisGui, ctrl, fileArray, *) {
-    global folderEdit
     if (checkIfGenerating())
         return
-    folderPath := normalizePath(fileArray[1])
-    if (folderPath) { ; Verificar si la ruta es válida
-        folderEdit.Value := folderPath
-        processFolder(folderEdit.Value)
-    }
+    processFolder(fileArray[1])
 }
 
 /**
@@ -218,32 +207,17 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
 ;todo---SECTION: Utility Functions
 
 /**
- * * Normaliza una ruta de archivo reemplazando todas las barras "/" con "\" y eliminando cualquier barra inicial o final.
- * @param {string} path - La ruta a normalizar.
- * @return {string} - La ruta normalizada.
+ * * Verifica si un valor está en una lista.
+ * @param {Array} list - La lista a verificar.
+ * @param {string} value - El valor a buscar.
+ * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
  */
-normalizePath(path) {
-    path := StrReplace(path, "/", "\")
-    while (SubStr(path, 1, 1) = "\" or SubStr(path, 1, 1) = "/") {
-        path := SubStr(path, 2)
+hasValue(list, value) {
+    for item in list {
+        if (item = value)
+            return true
     }
-    while (SubStr(path, -1) = "\" or SubStr(path, -1) = "/") {
-        path := SubStr(path, 1, -1)
-    }
-    return validateFolder(path)
-}
-
-/**
- * * Valida si una ruta es una carpeta válida.
- * @param {string} path - La ruta a validar.
- * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
- */
-validateFolder(path) {
-    if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
-        showTopMsgBox("Ruta de Carpeta Inválida", "Por favor, ingrese una ruta de carpeta válida.", "Error", true)
-        return false
-    }
-    return path
+    return false
 }
 
 /**
@@ -260,17 +234,86 @@ getMainFolderName(folderPath) {
 }
 
 /**
- * * Verifica si un valor está en una lista.
- * @param {Array} list - La lista a verificar.
- * @param {string} value - El valor a buscar.
- * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
+ * * Valida si una ruta es una carpeta válida.
+ * @param {string} path - La ruta a validar.
+ * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
  */
-hasValue(list, value) {
-    for item in list {
-        if (item = value)
-            return true
+isValidFolder(path) {
+    if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
+        return false
     }
-    return false
+    return true
+}
+
+/**
+ * * Limpia y normaliza una ruta de carpeta, reemplazando "/" por "\" y eliminando barras iniciales y finales.
+ * @param {string} path - La ruta de la carpeta a limpiar.
+ * @returns {string|boolean} - La ruta de la carpeta limpiada o false en caso de error.
+ */
+cleanFolderPath(path) {
+    ; Reemplaza "/" por "\" y elimina barras iniciales y finales
+    path := Trim(StrReplace(path, "/", "\"), "\/")
+    try {
+        originalDir := A_WorkingDir
+        SetWorkingDir(path)
+        path := A_WorkingDir
+        SetWorkingDir(originalDir)
+        return path
+    } catch {
+        return false
+    }
+}
+
+/**
+ * * Limpia y normaliza una ruta de archivo, reemplazando "/" por "\" y eliminando barras iniciales y finales.
+ * @param {string} path - La ruta del archivo a limpiar.
+ * @param {string} mainFolderPath - La ruta principal de la carpeta.
+ * @returns {string|boolean} - La ruta del archivo limpiada o false en caso de error.
+ */
+cleanFilePath(path, mainFolderPath) {
+    ; Reemplaza "/" por "\" y elimina barras iniciales y finales
+    path := Trim(StrReplace(path, "/", "\"), "\/")
+    try {
+        split := StrSplit(path, "\")
+        ; showTopMsgBox("split", split.Length)
+
+        if (split.Length = 1) {
+            return mainFolderPath "\" path
+        }
+
+        file := split.Pop()
+        dirFile := ""
+        for index, part in split {
+            dirFile .= (index > 1 ? "\" : "") . part
+        }
+
+        originalDir := A_WorkingDir
+        pathFolder := mainFolderPath "\" dirFile
+        ; showTopMsgBox("pathFolder", pathFolder)
+        SetWorkingDir(pathFolder)
+        pathFolder := A_WorkingDir
+
+        path := pathFolder "\" file
+        ; showTopMsgBox("path", path)
+
+        SetWorkingDir(originalDir)
+        return path
+    } catch {
+        return false
+    }
+}
+
+/**
+ * * Limpia y normaliza una ruta, determinando si es una carpeta o un archivo.
+ * @param {string} path - La ruta a limpiar.
+ * @returns {string|boolean} - La ruta limpiada o false en caso de error.
+ */
+cleanPath(path) {
+    global mainFolderPath
+    cleanPath := cleanFolderPath(path)
+    if (!cleanPath)
+        return cleanFilePath(path, mainFolderPath)
+    return cleanPath
 }
 
 /**
@@ -284,22 +327,30 @@ getFileExtension(filePath) {
 }
 
 /**
- * * Lee las extensiones permitidas desde un archivo.
- * @param {string} filePath - La ruta del archivo que contiene las extensiones permitidas.
- * @return {Array} - Una lista de extensiones permitidas.
+ * * Analiza el archivo de configuración y devuelve las extensiones permitidas, archivos completos o patrones de exclusión.
+ * @param {string} pathConfiFile - La ruta del archivo de configuración.
+ * @param {string} returnType - El tipo de información a devolver: "extensions" para extensiones permitidas, "files" para archivos completos, "patterns" para patrones de exclusión.
+ * @return {Array} - Una lista de extensiones permitidas, archivos completos o patrones de exclusión según el tipo de información solicitado.
  */
-loadAllowedExtensions(filePath) {
-    if !FileExist(filePath) {
-        showTopMsgBox("Archivo de Extensiones No Encontrado", "El archivo de extensiones permitidas no existe. Asegúrese de que '" filePath "' está en el directorio correcto y contiene las extensiones válidas, una por línea.", "Error", true)
+analyzeConfigFile(pathConfiFile, returnType := "extensions") {
+    if !FileExist(pathConfiFile) {
+        showTopMsgBox("El archivo de configuración no existe. Asegúrese de que '" pathConfiFile "' está en el directorio correcto y contiene las entradas válidas.", "Archivo de Configuración No Encontrado", "Error", true)
         return []
     }
-    extensions := []
-    Loop Read, filePath {
-        extension := Trim(A_LoopReadLine)
-        if (extension != "" && SubStr(extension, 1, 1) != "#") ; Ignorar comentarios y líneas vacías
-            extensions.Push(extension)
+    data := []
+    Loop Read, pathConfiFile {
+        line := Trim(A_LoopReadLine)
+        if (line != "" && SubStr(line, 1, 1) != "#") {
+            if (returnType = "extensions" && !InStr(line, ".")) {
+                data.Push(line)
+            } else if (returnType = "files" && InStr(line, ".")) {
+                data.Push(line)
+            } else if (returnType = "patterns" && InStr(line, "*")) {
+                data.Push(line)
+            }
+        }
     }
-    return extensions
+    return data
 }
 
 /**
@@ -313,25 +364,48 @@ generateTempFileName(prefix) {
 }
 
 /**
- * * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
- * @param {string} title - El título del MsgBox.
+ * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
  * @param {string} message - El mensaje a mostrar en el MsgBox.
- * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question).
+ * @param {string} title - El título del MsgBox.
+ * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question, Default).
  * @param {boolean} async - Si es verdadero, muestra el MsgBox asincrónicamente.
  */
-showTopMsgBox(title, message, type := "Info", async := false) {
+showTopMsgBox(message := "", title := "", type := "Default", async := false) {
+    ; Convertir el tipo de mensaje a minúsculas para que el switch no distinga entre mayúsculas y minúsculas
+    type := StrLower(type)
+
     ; Determinar el ícono basado en el tipo de mensaje
     switch type {
-        case "Error":
+        case "error":
             icon := 0x10 ; Ícono de error
-        case "Warning":
+        case "warning":
             icon := 0x30 ; Ícono de advertencia
-        case "Info":
+        case "info":
             icon := 0x40 ; Ícono de información
-        case "Question":
+        case "question":
             icon := 0x20 ; Ícono de pregunta
         default:
-            icon := 0x40 ; Ícono de información por defecto
+            ; Capturar el número de línea utilizando una excepción
+            try {
+                ; Forzar una excepción para capturar el contexto de la llamada
+                throw ValueError("Capturing line number", -1)
+            } catch ValueError as err {
+                callerLine := err.Line
+            }
+            icon := 0 ; Sin ícono por defecto
+
+            ; Formatear el mensaje según las combinaciones de message y title
+            if (message = "" and title = "") {
+                message := ""
+            } else if (message != "" and title != "") {
+                message := message ":`n`"" title "`""
+            } else if (message = "" and title != "") {
+                message := "`"" title "`""
+            } else if (title != "" and message = "") {
+                message := title
+            }
+
+            title := "Line: " callerLine
     }
 
     ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
@@ -350,12 +424,12 @@ showTopMsgBox(title, message, type := "Info", async := false) {
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
  */
 init() {
-    global requiredFiles
-    fileExtents := requiredFiles.extents
+    global confiFiles
+    fileConfi := confiFiles.filesContents
 
-    if (!FileExist(fileExtents)) {
-        message := "El archivo requerido '" fileExtents "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco."
-        showTopMsgBox("Archivo Requerido No Encontrado", message, "Error")
+    if (!FileExist(fileConfi)) {
+        message := "El archivo requerido '" fileConfi "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene datos válidos, uno por línea, sin comentarios o espacios en blanco."
+        showTopMsgBox(message, "Archivo Requerido No Encontrado", "Error")
         ExitApp(1)
     }
 
@@ -370,8 +444,8 @@ init() {
 checkIfGenerating() {
     global isGenerating
     if (isGenerating) {
-        showTopMsgBox("Proceso de Generación en Curso", "El proceso de generación del árbol aún está en curso. Por favor, espere.", "Warning", true)
-        return 1
+        showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
+        return true
     }
 }
 
@@ -380,30 +454,41 @@ checkIfGenerating() {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 processFolder(folderPath) {
-    global isGenerating, myGui
+    global mainFolderPath, isGenerating, myGui, folderEdit
+
+    if (folderPath = "")
+        return
 
     if (checkIfGenerating()) {
+        return
+    }
+
+    ; Normalizar la ruta
+    folderPath := cleanFolderPath(folderPath)
+
+    if (!folderPath = false) {
+        folderEdit.Value := folderPath
+    }
+
+    if (!isValidFolder(folderPath)) {
+        showTopMsgBox("Por favor, ingrese una ruta de carpeta válida.", "Ruta de Carpeta Inválida", "Error", true)
+        endGeneration()
         return
     }
 
     isGenerating := true
     myGui["GenerateText"].Value := "Generating..."  ; Cambia el texto a "Generating..."
 
-    ; Normalizar la ruta
-    folderPath := normalizePath(folderPath)
-    if (!folderPath) {
-        endGeneration()
-        return
-    }
+    mainFolderPath := folderPath
 
     ; Generar el árbol de directorios
-    if (checkAndGenerateDirectoryTree(folderPath)) {
+    if (checkAndGenerateDirectoryTree()) {
         endGeneration()
         return
     }
 
     ; Generar el contenido de los archivos
-    if (checkAndGenerateFilesContents(folderPath)) {
+    if (checkAndGenerateFilesContents()) {
         endGeneration()
         return
     }
@@ -425,23 +510,21 @@ endGeneration() {
 
 /**
  * * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
- * @param {string} folderPath - La ruta de la carpeta.
  */
-checkAndGenerateDirectoryTree(folderPath) {
+checkAndGenerateDirectoryTree() {
     global directoryTreeCheckbox
     if (directoryTreeCheckbox.Value) {
-        return generateDirectoryTree(folderPath)
+        return generateDirectoryTree()
     }
 }
 
 /**
  * * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
- * @param {string} folderPath - La ruta de la carpeta.
  */
-checkAndGenerateFilesContents(folderPath) {
+checkAndGenerateFilesContents() {
     global fileContentsCheckbox
     if (fileContentsCheckbox.Value) {
-        return generateFilesContents(folderPath)
+        return generateFilesContents()
     }
 }
 
@@ -450,16 +533,23 @@ checkAndGenerateFilesContents(folderPath) {
 
 /**
  * * Genera el árbol de archivos de la carpeta seleccionada.
- * @param {string} folderPath - La ruta de la carpeta.
+ * 
+ * Posible error: Si ocurre un error al ejecutar el comando de PowerShell, puede ser debido a:
+ * 1. PowerShell no está instalado o habilitado en el sistema.
+ * 2. Restricciones de políticas de ejecución de scripts en PowerShell.
+ * 
+ * Solución: 
+ * 1. Verifique que PowerShell está instalado y habilitado en su sistema.
+ * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
  */
-generateDirectoryTree(folderPath) {
-    global tempFiles
+generateDirectoryTree() {
+    global mainFolderPath, tempFiles
     temp := tempFiles.dirTree
     ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" folderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
+    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" mainFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
     RunWait(command, , "Hide")
     if (A_LastError) {
-        MsgBox("+AlwaysOnTop Error al generar el árbol de archivos. Por favor, intente nuevamente.")
+        showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al generar el árbol de archivos", "Error", true)
         return 1
     }
 
@@ -471,14 +561,14 @@ generateDirectoryTree(folderPath) {
     fileTreeArray.RemoveAt(1)
 
     ; Obtener el nombre de la carpeta principal
-    folderName := getMainFolderName(folderPath)
+    folderName := getMainFolderName(mainFolderPath)
 
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     fileTreeArray[1] := folderName
-    ; Filtrar líneas vacías y eliminar espacios en blanco y tabulaciones
+    ; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones, y omitir líneas que contengan el valor de temp
     fileTreeNew := "``````tree`n"
     for line in fileTreeArray {
-        if (StrLen(Trim(line)) > 0) {
+        if (StrLen(Trim(line)) > 0 && !InStr(line, temp)) {
             fileTreeNew .= line "`n"
         }
     }
@@ -494,43 +584,50 @@ generateDirectoryTree(folderPath) {
 
 /**
  * * Genera el contenido de los archivos de la carpeta seleccionada.
- * @param {string} folderPath - La ruta de la carpeta.
  */
-generateFilesContents(folderPath) {
-    global tempFiles, requiredFiles
+generateFilesContents() {
+    global mainFolderPath, tempFiles, confiFiles
 
     temp := tempFiles.filesContents
-    fileExtents := requiredFiles.extents
+    fileConfi := confiFiles.filesContents
 
     fileList := ""
-    allowedExtensions := loadAllowedExtensions(fileExtents) ; Cargar extensiones permitidas desde archivo
+    allowedExtensions := analyzeConfigFile(fileConfi, "extensions") ; Cargar extensiones permitidas desde archivo
     if (allowedExtensions.Length = 0) {
-        showTopMsgBox("No se Encontraron Extensiones Permitidas", "No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileExtents "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "Error", true)
+        showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileConfi "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
         return 1
     }
+    mainFolder := getMainFolderName(mainFolderPath)
 
-    mainFolder := getMainFolderName(folderPath)
+    ignoredFiles := analyzeConfigFile(fileConfi, "files") ; Cargar archivos completos desde archivo
+
+    ; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
+    for index, item in ignoredFiles {
+        ignoredFiles[index] := cleanPath(item)
+        ; showTopMsgBox("ignoredFiles[" index "]", ignoredFiles[index])
+    }
+
     fileArray := []
-    Loop Files, folderPath "\*.*", "R" {
+    Loop Files, mainFolderPath "\*.*", "R" {
         ; Obtener la ruta relativa al directorio principal
-        relativePath := StrReplace(A_LoopFileFullPath, folderPath "\")
+        relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
         ; Obtener la extensión del archivo
         fileExt := StrLower(StrSplit(A_LoopFileFullPath, ".").Pop())
-        ; Verificar si la extensión está en la lista de archivos permitidos
-        if hasValue(allowedExtensions, fileExt) {
+        ; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
+        if hasValue(allowedExtensions, fileExt) && !hasValue(ignoredFiles, A_LoopFileFullPath) {
+            ; showTopMsgBox(relativePath, A_LoopFileFullPath)
             fileArray.Push(relativePath)
         }
     }
 
-
     if (fileArray.Length = 0) {
-        fileList := "**[Aviso No Hay Archivos que Coincidan con las Extensiones Permitidas]**"
+        fileList := "**[Aviso: No Hay Archivos que Coincidan con la Configuracion Actual]**"
     } else {
         for index, relativePath in fileArray {
-            try {
-                fileExtension := getFileExtension(relativePath)
+            fileExtension := getFileExtension(relativePath)
 
-                fileContents := FileRead(folderPath "\" relativePath, "UTF-8")
+            try {
+                fileContents := FileRead(mainFolderPath "\" relativePath, "UTF-8")
                 errorFileContents := false
             } catch {
                 fileContents := ""
@@ -538,7 +635,7 @@ generateFilesContents(folderPath) {
             }
 
             if (errorFileContents)
-                fileList .= "#### Archivo ``" relativePath "`` **[Error Lectura del archivo]**"
+                fileList .= "#### Archivo ``" relativePath "`` **[Error: Lectura del archivo]**"
             else
                 fileList .= "#### Archivo ``" relativePath "``: `n````````" fileExtension " `n" fileContents "`n````````"
 
@@ -597,7 +694,7 @@ mergeFiles() {
                 outputContent .= spacer
             }
         } catch {
-            showTopMsgBox("Error al Leer Archivo de Árbol de Directorios", "No se pudo leer dirTree.tmp.", "Error", true)
+            showTopMsgBox("No se pudo leer dirTree.tmp.", "Error al Leer Archivo de Árbol de Directorios", "Error", true)
         }
     }
 
@@ -607,7 +704,7 @@ mergeFiles() {
             fileContents := FileRead(temp2, "UTF-8")
             outputContent .= "### Contenido de los Archivos:`n" fileContents
         } catch {
-            showTopMsgBox("Error al Leer Archivo de Contenido de Archivos", "No se pudo leer filesContents.tmp.", "Error", true)
+            showTopMsgBox("No se pudo leer filesContents.tmp.", "Error al Leer Archivo de Contenido de Archivos", "Error", true)
         }
     }
 
@@ -616,7 +713,7 @@ mergeFiles() {
         fileDel(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("Error al Escribir Archivo de Salida", "No se pudo escribir en " output ".", "Error", true)
+        showTopMsgBox("No se pudo escribir en " output ".", "Error al Escribir Archivo de Salida", "Error", true)
         return
     }
 
@@ -625,11 +722,11 @@ mergeFiles() {
     ClipWait(1, 0)
     A_Clipboard := outputContent
     if !ClipWait(2) {
-        showTopMsgBox("Error al Copiar al Portapapeles", "El intento de copiar texto al portapapeles falló.", "Error", true)
+        showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
         return
     }
 
-    showTopMsgBox("Información Copiada", "Información copiada al portapapeles.", "Info", true)
+    showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
 

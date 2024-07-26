@@ -1,8 +1,21 @@
-## Documentación de FileTreeGen
+## Índice de la Documentación de FileTreeGen v1.5
+
+- [Introducción](#introducción)
+- [Funcionalidades Principales](#funcionalidades-principales)
+- [Requisitos](#requisitos)
+- [Estructura de Archivos](#estructura-de-archivos)
+- [Contenido de los Archivos](#contenido-de-los-archivos)
+  - [FilesContents.conf](#filescontentsconf)
+- [Resumen del Código](#resumen-del-código)
+- [Ejecución del Programa](#ejecución-del-programa)
+- [Ejemplo de Uso](#ejemplo-de-uso)
+- [Archivos de Ejemplo](#archivos-de-ejemplo)
+- [Notas Adicionales](#notas-adicionales)
+- [Conclusión](#conclusión)
 
 ### Introducción
 
-**FileTreeGen** es un programa desarrollado en AutoHotkey v2.0 que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos.
+**FileTreeGen** es un programa desarrollado en AutoHotkey v2.0.18 que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v1.5**.
 
 ### Funcionalidades Principales
 
@@ -14,8 +27,8 @@
 
 ### Requisitos
 
-- AutoHotkey v2.0 o superior (si se usa el script .ah2).
-- Archivo `AllowedExtensions.txt` que contiene las extensiones permitidas.
+- AutoHotkey v2.0.18 o superior (si se usa el script .ah2).
+- Archivo `FilesContents.conf` que contiene las extensiones permitidas y archivos ignorados.
 - Carpeta de destino con los archivos a procesar.
 
 ### Estructura de Archivos
@@ -24,7 +37,7 @@ La estructura de archivos del proyecto es la siguiente:
 
 ```tree
 FileTreeGen
-│   AllowedExtensions.txt
+│   FilesContents.conf
 │   FileTreeGen.ah2
 │   output.md
 │   README.md
@@ -33,9 +46,21 @@ FileTreeGen
 │       FileTreeGen.exe
 │       FileTreeGen.ico
 │
-└───tests
+├───files_tests
+│       ..file
+│       .1.file
+│       .file
+│       1..file
+│       1.file
+│       false
+│       file
+│       true
+│
+└───tree_tests
+    │   1.txt
+    │
     └───1
-        │   1.txt
+        │   2.txt
         │
         ├───a
         │       a.txt
@@ -48,17 +73,30 @@ FileTreeGen
         │
         └───d
                 d.js
-
 ```
 
 ### Contenido de los Archivos
 
-#### AllowedExtensions.txt
+#### FilesContents.conf
 
-Este archivo contiene las extensiones de archivos permitidas para la extracción de contenidos. El contenido es el siguiente:
+Este archivo contiene la configuración de las extensiones de archivos permitidas y los archivos que deben ser ignorados durante el procesamiento.
 
-```
-# Archivos de texto
+```conf
+#; Condiciones aplicadas al proceso "Files Contents"
+
+##? ♦ Extensiones de archivos permitidas
+# Esta sección define las extensiones de archivo que son permitidas para su procesamiento.
+# Cada línea contiene una extensión sin el punto inicial.
+# Las extensiones deben estar listadas sin comentarios ni espacios en blanco innecesarios.
+# Se ignoran las líneas que comienzan con "#" y las que contienen un "." (que indican archivos completos).
+
+#? ♦ Archivos ignorados (Usar rutas completas)
+# Esta sección define los archivos completos que deben ser ignorados durante el procesamiento.
+# Cada línea contiene el nombre completo del archivo junto con su extensión.
+# Se ignoran las líneas que comienzan con "#".
+
+#? ♦ Extensiones de archivos permitidas
+##* Extensiones de Archivos de texto
 txt
 md
 csv
@@ -67,13 +105,14 @@ ini
 rtf
 tex
 
-# Lenguajes de programación
+##* Extensiones de Lenguajes de programación
 ahk
 ah2
 py
 java
 cpp
 js
+ts
 html
 css
 json
@@ -85,52 +124,56 @@ bat
 ps1
 sql
 
-# Archivos de configuración y otros
+##* Extensiones de Archivos de configuración y otros
 conf
 cfg
 toml
 yaml
 yml
 properties
+
+#? ♦ Archivos ignorados
+##* Archivo de salida combinado
+output.md
+
+#? Tests
+##! Extensiones de Archivos de pruebas de la carpeta `files_tests`
+#;💹
+# file
+
+##! Archivos de pruebas de la carpeta `files_tests`
+#;💹
+# ..file
+# .1.file
+# .file
+# 1..file
+# 1.file
+
+##! Archivos de pruebas de la carpeta `tree_tests`
+#;💹
+# 1.txt
+# 1\d\d.js
+# .\1\d\d.js
+
+###! ( EN DESAROLLO )
+#;⛔
+# 1\d\*.js
+# 1\d\d.*
+# 1\d\*
 ```
 
-#### FileTreeGen.ah2
+### Resumen del Código
 
-Este es el archivo principal del programa escrito en AutoHotkey v2.0. El contenido incluye varias secciones de código que manejan la GUI, la generación del árbol de directorios, la extracción de contenidos de archivos y la combinación de resultados.
+El script de AutoHotkey para FileTreeGen se organiza en varias secciones clave:
 
-### Secciones del Código
-
-#### Variables Globales
-
-Variables para almacenar el nombre del programa, los archivos requeridos, archivos temporales y una bandera para evitar ejecuciones concurrentes.
-
-#### Configuración del Entorno
-
-Configuraciones relacionadas con la ejecución del script, como la limitación de teclas y deshabilitación de ciertas características de depuración.
-
-#### Gestión de la GUI
-
-Funciones para crear y gestionar la interfaz gráfica del usuario, que permite seleccionar una carpeta y generar el árbol de archivos y el contenido de archivos.
-
-#### Funciones de Utilidad
-
-Funciones auxiliares para normalizar rutas, validar carpetas, leer extensiones permitidas, generar nombres de archivos temporales y mostrar mensajes en pantalla.
-
-#### Gestión del Proceso
-
-Funciones para inicializar el script, verificar si el proceso de generación está en curso y procesar la carpeta seleccionada.
-
-#### Generación del Árbol de Directorios
-
-Funciones para generar el árbol de archivos de la carpeta seleccionada utilizando PowerShell y procesar el resultado para eliminar líneas innecesarias.
-
-#### Generación de Contenidos de Archivos
-
-Funciones para extraer el contenido de archivos con extensiones permitidas y combinar estos contenidos en un archivo temporal.
-
-#### Gestión de Archivos
-
-Funciones para eliminar archivos si existen y unir los archivos temporales en uno solo según los checkboxes activados en la GUI. También incluye la copia del contenido final al portapapeles.
+- **Variables Globales**: Definición de variables globales para la configuración del programa y archivos temporales.
+- **Configuración del Entorno**: Ajustes del entorno de ejecución.
+- **Gestión de la GUI**: Funciones para crear y gestionar la interfaz gráfica de usuario.
+- **Funciones de Utilidad**: Funciones auxiliares para manejar rutas, validar carpetas y leer configuraciones.
+- **Gestión del Proceso**: Funciones para inicializar el script, verificar ejecuciones concurrentes y procesar la carpeta seleccionada.
+- **Generación del Árbol de Directorios**: Funciones para crear el árbol de directorios de la carpeta seleccionada.
+- **Generación de Contenidos de Archivos**: Funciones para extraer el contenido de los archivos permitidos.
+- **Gestión de Archivos**: Funciones para manejar la eliminación y combinación de archivos temporales.
 
 ### Ejecución del Programa
 
@@ -138,7 +181,7 @@ Para ejecutar el programa, tiene dos opciones:
 
 1. **Usar el Archivo Ejecutable**: Ejecute `bin/FileTreeGen.exe` directamente. No se requiere la instalación de AutoHotkey. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
-2. **Usar el Script en AutoHotkey**: Asegúrese de tener AutoHotkey v2.0 instalado y ejecute `FileTreeGen.ah2`. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
+2. **Usar el Script en AutoHotkey**: Asegúrese de tener AutoHotkey v2.0.18 instalado y ejecute `FileTreeGen.ah2`. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
 ### Ejemplo de Uso
 
@@ -148,13 +191,19 @@ Para ejecutar el programa, tiene dos opciones:
 
 ### Archivos de Ejemplo
 
-Ejemplos de archivos de prueba ubicados en la carpeta `tests`:
+Ejemplos de archivos de prueba ubicados en la carpeta `tree_tests`:
 
 `````markdown
-#### Archivo `1\1.txt`:
+#### Archivo `1.txt`:
 
 ```txt
 File in the main path
+```
+
+#### Archivo `1\2.txt`:
+
+```txt
+File in the secondary path
 ```
 
 #### Archivo `1\a\a.txt`:
@@ -191,19 +240,20 @@ Estos archivos de ejemplo permiten probar la funcionalidad del programa y verifi
 ### Notas Adicionales
 
 > [!NOTE]  
-> FileTreeGen es capaz de generar tanto la estructura de directorios como el contenido de archivos específicos en una carpeta seleccionada. La interfaz gráfica (GUI) facilita la selección de carpetas y la configuración de las opciones de generación.
+> FileTreeGen puede generar tanto la estructura de directorios como el contenido de archivos específicos en una carpeta seleccionada. La GUI facilita la selección de carpetas y la configuración de opciones de generación.
 
 > [!TIP]
-> Puede arrastrar y soltar una carpeta directamente en la GUI de FileTreeGen para una selección rápida. Además, asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según sus necesidades antes de iniciar la generación.
+> Puede arrastrar y soltar una carpeta directamente en la GUI de FileTreeGen para una selección rápida. Asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según sus necesidades antes de iniciar la generación.
+> También puede agregar archivos específicos que deben ser ignorados por la función Files Contents en el archivo `FilesContents.conf`. Asegúrese de listar estos archivos correctamente para que sean omitidos durante el procesamiento.
 
 > [!IMPORTANT]  
-> Es fundamental que el archivo `AllowedExtensions.txt` esté presente en el directorio adecuado. Este archivo define las extensiones de archivos permitidas para la extracción de contenidos. Sin este archivo, FileTreeGen no podrá realizar su función correctamente.
+> El archivo `FilesContents.conf` debe estar presente en el directorio adecuado. Define las extensiones de archivos permitidas para la extracción de contenidos. Sin este archivo, FileTreeGen no funcionará correctamente.
 
 > [!WARNING]  
-> Soy consciente de que hay problemas de lectura de contenido de archivos cuando se usan rutas relativas. Para evitar estos problemas, asegúrese de proporcionar rutas absolutas al seleccionar carpetas y archivos.
+> Las rutas relativas deberían funcionar correctamente. Asegúrese de proporcionar rutas relativas precisas para evitar errores en la generación de contenidos y estructuras de archivos.
 
 > [!CAUTION]
-> Evite ejecutar múltiples instancias de FileTreeGen simultáneamente, ya que el script incluye una bandera para evitar ejecuciones concurrentes. Ejecutar varias instancias podría resultar en comportamientos inesperados o errores en la generación del árbol de archivos y el contenido de los archivos.
+> Los patrones de archivos como el uso de `*` o `?` aún no están implementados y pueden causar errores si se utilizan. Se planea añadir esta funcionalidad en el futuro, pero por ahora, evite usarlos. Asegúrese de que el archivo `FilesContents.conf` esté bien configurado y que las líneas estén estructuradas según la sintaxis requerida.
 
 ### Conclusión
 
