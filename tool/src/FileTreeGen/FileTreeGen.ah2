@@ -288,84 +288,34 @@ isValidFolder(path) {
     return true
 }
 
-; MsgBox "\\?\" normalizePath("..\file.ext")
-
-; /**
-;  * Normaliza una ruta y verifica su existencia.
-;  * @param {String} path - La ruta a normalizar.
-;  * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
-;  */
-; normalizePath(path, mainPath?) {
-;     if (IsSet(mainPath)) {
-;         originalDir := A_WorkingDir
-;         SetWorkingDir(mainPath)
-;     }
-
-;     ;; Primera llamada para obtener el tamaño necesario del buffer
-;     cc := DllCall("GetFullPathName", "str", path, "uint", 0, "ptr", 0, "ptr", 0, "uint")
-;     buf := Buffer(cc * 2) ;; Crear buffer con el tamaño adecuado
-;     ;; Segunda llamada para obtener la ruta completa
-;     DllCall("GetFullPathName", "str", path, "uint", cc, "ptr", buf, "ptr", 0)
-;     cleanPath := StrGet(buf) ;; Convertir el buffer a cadena y devolver
-;     if (IsSet(mainPath))
-;         SetWorkingDir(originalDir)
-
-;     ;; Eliminar barra invertida final si existe
-;     if (SubStr(cleanPath, -1, 1) = "\")
-;         cleanPath := SubStr(cleanPath, 1, StrLen(cleanPath) - 1)
-
-;     ;; Verificar si la ruta existe
-;     if !FileExist(cleanPath)
-;         return false
-
-;     return cleanPath
-; }
-
 /**
  * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
  * @param {String} path - La ruta a normalizar.
  * @param {String} [mainPath] - (Opcional) El directorio de trabajo principal para resolver la ruta.
  * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
  */
-normalizePath(path, mainPath := "") {
-    ; Guardar el directorio de trabajo actual si se proporciona mainPath
-    if (mainPath != "") {
+normalizePath(path, mainPath?) {
+    ;; Guardar el directorio de trabajo actual si se proporciona mainPath
+    if (IsSet(mainPath)) {
         originalDir := A_WorkingDir
         SetWorkingDir(mainPath)
     }
-
-    ; Primera llamada para obtener el tamaño necesario del buffer
+    ;; Primera llamada para obtener el tamaño necesario del buffer
     cc := DllCall("GetFullPathName", "str", path, "uint", 0, "ptr", 0, "ptr", 0, "uint")
-    if (cc = 0) {
-        if (mainPath != "")
-            SetWorkingDir(originalDir)
-        return false
-    }
-
-    buf := Buffer(cc * 2) ; Crear buffer con el tamaño adecuado
-
-    ; Segunda llamada para obtener la ruta completa
+    buf := Buffer(cc * 2) ;; Crear buffer con el tamaño adecuado
+    ;; Segunda llamada para obtener la ruta completa
     result := DllCall("GetFullPathName", "str", path, "uint", cc, "ptr", buf, "ptr", 0)
-    if (result = 0) {
-        if (mainPath != "")
-            SetWorkingDir(originalDir)
-        return false
-    }
+    cleanPath := StrGet(buf) ;; Convertir el buffer a cadena
 
-    cleanPath := StrGet(buf) ; Convertir el buffer a cadena
-
-    ; Restaurar el directorio de trabajo original si se proporcionó mainPath
-    if (mainPath != "")
+    ;; Restaurar el directorio de trabajo original si se proporcionó mainPath
+    if (IsSet(mainPath))
         SetWorkingDir(originalDir)
-
-    ; Eliminar barra invertida final si existe
+    ;; Eliminar barra invertida final si existe
     if (SubStr(cleanPath, -1, 1) = "\")
         cleanPath := SubStr(cleanPath, 1, -1)
-
-    ; Verificar si la ruta existe
+    ;; Verificar si la ruta existe
     if !FileExist(cleanPath)
         return false
-
     return cleanPath
 }
 
