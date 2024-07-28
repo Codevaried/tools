@@ -249,7 +249,7 @@ arrayHasValue(this, valueToFind) {
 }
 
 /**
- * Combina múltiples arrays en uno solo.
+ * * Combina múltiples arrays en uno solo.
  * @param {Array} arrays - Uno o más arrays a combinar.
  * @return {Array} - Un nuevo array que contiene todos los elementos de los arrays proporcionados.
  */
@@ -264,16 +264,16 @@ combineArrays(arrays*) {
 }
 
 /**
- * * Obtiene el nombre de la carpeta principal de una ruta.
+ * * Obtiene el nombre de la carpeta actual de una ruta.
  * @param {string} folderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
  */
-getMainFolderName(folderPath) {
-    originalDir := A_WorkingDir
-    SetWorkingDir(folderPath)
-    mainFolder := RegExReplace(A_WorkingDir, "^.*\\")
-    SetWorkingDir(originalDir)
-    return mainFolder
+getCurrentFolderName(folderPath) {
+    ; Utilizar SplitPath para obtener el nombre de la carpeta actual
+    SplitPath(RTrim(folderPath, "\"), , &OutDir, , &OutDirName)
+
+    ; Devolver el nombre de la carpeta actual
+    return OutDirName
 }
 
 /**
@@ -289,7 +289,7 @@ isValidFolder(path) {
 }
 
 /**
- * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
+ * * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
  * @param {String} path - La ruta a normalizar.
  * @param {String} [mainPath] - (Opcional) El directorio de trabajo principal para resolver la ruta.
  * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
@@ -322,11 +322,17 @@ normalizePath(path, mainPath?) {
 /**
  * * Obtiene la extensión de un archivo a partir de su ruta.
  * @param {string} filePath - La ruta del archivo.
- * @returns {string} La extensión del archivo, incluyendo el punto. Si no tiene extensión, retorna una cadena vacía.
+ * @returns {string} La extensión del archivo, sin incluir el punto. Si no tiene extensión, retorna una cadena vacía.
  */
 getFileExtension(filePath) {
-    extension := RegExReplace(filePath, ".*\.(.*)", "$1")
-    return InStr(filePath, ".") ? extension : ""
+    ; Definir una variable para almacenar la extensión del archivo
+    OutExtension := ""
+
+    ; Utilizar SplitPath para obtener la extensión del archivo
+    SplitPath(filePath, , , &OutExtension)
+
+    ; Devolver la extensión (si existe) o una cadena vacía
+    return OutExtension
 }
 
 /**
@@ -621,7 +627,7 @@ generateDirectoryTree() {
     fileTreeArray.RemoveAt(1)
 
     ; Obtener el nombre de la carpeta principal
-    folderName := getMainFolderName(mainFolderPath)
+    folderName := getCurrentFolderName(mainFolderPath)
 
     ; Reemplazar la primera línea con el nombre de la carpeta principal
     fileTreeArray[1] := folderName
@@ -684,9 +690,9 @@ generateFilesContents() {
     ;; Se vuelven a eliminar los duplicados porque ahora se comprarn con la ruta absoluta para evitar rutas relativas repetidas.
     ignoredFiles := removeDuplicates(ignoredFiles)
 
-    for index, item in ignoredFiles {
-        showTopMsgBox("ignoredFiles[" index "]", item)
-    }
+    ; for index, item in ignoredFiles {
+    ;     showTopMsgBox("ignoredFiles[" index "]", item)
+    ; }
 
 
     fileArray := []
