@@ -43,9 +43,7 @@ PROGRAM.fullDescription := PROGRAM.name " " PROGRAM.version " - " PROGRAM.descri
  * ! Archivos de configuración del programa.
  * @global {Object}
  */
-global confiFiles := {
-    filesContents: "FilesContents.conf", ; Archivo de configuracion que contiene las extensiones permitidas y los archivos ignorados en el proceso "Files Contents"
-}
+global confiFileTreeGen := "FileTreeGen.conf" ; Archivo de configuracion que contiene las extensiones permitidas y los archivos ignorados en el proceso "Files Contents"
 
 /**
  * ! Archivos temporales utilizados durante la ejecución del programa.
@@ -222,6 +220,50 @@ hasValue(list, value) {
 }
 
 /**
+ * * Elimina los elementos duplicados de un array.
+ * @param {Array} arr - El array del que se eliminarán los duplicados.
+ * @return {Array} - Un nuevo array sin elementos duplicados.
+ */
+removeDuplicates(arr) {
+    uniqueArray := Array()
+    for item in arr {
+        if !arrayHasValue(uniqueArray, item) {
+            uniqueArray.Push(item)
+        }
+    }
+    return uniqueArray
+}
+
+/**
+ * * Verifica si un array contiene un valor específico.
+ * @param {Array} this - El array en el que buscar.
+ * @param {string} valueToFind - El valor a buscar en el array.
+ * @return {boolean} - Verdadero si el valor se encuentra en el array, falso si no.
+ */
+arrayHasValue(this, valueToFind) {
+    for index, value in this {
+        if value = valueToFind
+            return true
+    }
+    return false
+}
+
+/**
+ * Combina múltiples arrays en uno solo.
+ * @param {Array} arrays - Uno o más arrays a combinar.
+ * @return {Array} - Un nuevo array que contiene todos los elementos de los arrays proporcionados.
+ */
+combineArrays(arrays*) {
+    combinedArray := []
+    for each, arr in arrays {
+        for each, item in arr {
+            combinedArray.Push(item)
+        }
+    }
+    return combinedArray
+}
+
+/**
  * * Obtiene el nombre de la carpeta principal de una ruta.
  * @param {string} folderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
@@ -246,74 +288,84 @@ isValidFolder(path) {
     return true
 }
 
+; MsgBox "\\?\" normalizePath("..\file.ext")
+
+; /**
+;  * Normaliza una ruta y verifica su existencia.
+;  * @param {String} path - La ruta a normalizar.
+;  * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
+;  */
+; normalizePath(path, mainPath?) {
+;     if (IsSet(mainPath)) {
+;         originalDir := A_WorkingDir
+;         SetWorkingDir(mainPath)
+;     }
+
+;     ;; Primera llamada para obtener el tamaño necesario del buffer
+;     cc := DllCall("GetFullPathName", "str", path, "uint", 0, "ptr", 0, "ptr", 0, "uint")
+;     buf := Buffer(cc * 2) ;; Crear buffer con el tamaño adecuado
+;     ;; Segunda llamada para obtener la ruta completa
+;     DllCall("GetFullPathName", "str", path, "uint", cc, "ptr", buf, "ptr", 0)
+;     cleanPath := StrGet(buf) ;; Convertir el buffer a cadena y devolver
+;     if (IsSet(mainPath))
+;         SetWorkingDir(originalDir)
+
+;     ;; Eliminar barra invertida final si existe
+;     if (SubStr(cleanPath, -1, 1) = "\")
+;         cleanPath := SubStr(cleanPath, 1, StrLen(cleanPath) - 1)
+
+;     ;; Verificar si la ruta existe
+;     if !FileExist(cleanPath)
+;         return false
+
+;     return cleanPath
+; }
+
 /**
- * * Limpia y normaliza una ruta de carpeta, reemplazando "/" por "\" y eliminando barras iniciales y finales.
- * @param {string} path - La ruta de la carpeta a limpiar.
- * @returns {string|boolean} - La ruta de la carpeta limpiada o false en caso de error.
+ * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
+ * @param {String} path - La ruta a normalizar.
+ * @param {String} [mainPath] - (Opcional) El directorio de trabajo principal para resolver la ruta.
+ * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
  */
-cleanFolderPath(path) {
-    ; Reemplaza "/" por "\" y elimina barras iniciales y finales
-    path := Trim(StrReplace(path, "/", "\"), "\/")
-    try {
+normalizePath(path, mainPath := "") {
+    ; Guardar el directorio de trabajo actual si se proporciona mainPath
+    if (mainPath != "") {
         originalDir := A_WorkingDir
-        SetWorkingDir(path)
-        path := A_WorkingDir
-        SetWorkingDir(originalDir)
-        return path
-    } catch {
+        SetWorkingDir(mainPath)
+    }
+
+    ; Primera llamada para obtener el tamaño necesario del buffer
+    cc := DllCall("GetFullPathName", "str", path, "uint", 0, "ptr", 0, "ptr", 0, "uint")
+    if (cc = 0) {
+        if (mainPath != "")
+            SetWorkingDir(originalDir)
         return false
     }
-}
 
-/**
- * * Limpia y normaliza una ruta de archivo, reemplazando "/" por "\" y eliminando barras iniciales y finales.
- * @param {string} path - La ruta del archivo a limpiar.
- * @param {string} mainFolderPath - La ruta principal de la carpeta.
- * @returns {string|boolean} - La ruta del archivo limpiada o false en caso de error.
- */
-cleanFilePath(path, mainFolderPath) {
-    ; Reemplaza "/" por "\" y elimina barras iniciales y finales
-    path := Trim(StrReplace(path, "/", "\"), "\/")
-    try {
-        split := StrSplit(path, "\")
-        ; showTopMsgBox("split", split.Length)
+    buf := Buffer(cc * 2) ; Crear buffer con el tamaño adecuado
 
-        if (split.Length = 1) {
-            return mainFolderPath "\" path
-        }
-
-        file := split.Pop()
-        dirFile := ""
-        for index, part in split {
-            dirFile .= (index > 1 ? "\" : "") . part
-        }
-
-        originalDir := A_WorkingDir
-        pathFolder := mainFolderPath "\" dirFile
-        ; showTopMsgBox("pathFolder", pathFolder)
-        SetWorkingDir(pathFolder)
-        pathFolder := A_WorkingDir
-
-        path := pathFolder "\" file
-        ; showTopMsgBox("path", path)
-
-        SetWorkingDir(originalDir)
-        return path
-    } catch {
+    ; Segunda llamada para obtener la ruta completa
+    result := DllCall("GetFullPathName", "str", path, "uint", cc, "ptr", buf, "ptr", 0)
+    if (result = 0) {
+        if (mainPath != "")
+            SetWorkingDir(originalDir)
         return false
     }
-}
 
-/**
- * * Limpia y normaliza una ruta, determinando si es una carpeta o un archivo.
- * @param {string} path - La ruta a limpiar.
- * @returns {string|boolean} - La ruta limpiada o false en caso de error.
- */
-cleanPath(path) {
-    global mainFolderPath
-    cleanPath := cleanFolderPath(path)
-    if (!cleanPath)
-        return cleanFilePath(path, mainFolderPath)
+    cleanPath := StrGet(buf) ; Convertir el buffer a cadena
+
+    ; Restaurar el directorio de trabajo original si se proporcionó mainPath
+    if (mainPath != "")
+        SetWorkingDir(originalDir)
+
+    ; Eliminar barra invertida final si existe
+    if (SubStr(cleanPath, -1, 1) = "\")
+        cleanPath := SubStr(cleanPath, 1, -1)
+
+    ; Verificar si la ruta existe
+    if !FileExist(cleanPath)
+        return false
+
     return cleanPath
 }
 
@@ -328,30 +380,87 @@ getFileExtension(filePath) {
 }
 
 /**
- * * Analiza el archivo de configuración y devuelve las extensiones permitidas, archivos completos o patrones de exclusión.
- * @param {string} pathConfiFile - La ruta del archivo de configuración.
- * @param {string} returnType - El tipo de información a devolver: "extensions" para extensiones permitidas, "files" para archivos completos, "patterns" para patrones de exclusión.
- * @return {Array} - Una lista de extensiones permitidas, archivos completos o patrones de exclusión según el tipo de información solicitado.
+ * * Analiza el archivo de configuración y devuelve los elementos del array especificado.
+ * @param {string} pathConfigFile - La ruta del archivo de configuración.
+ * @param {string} section - La sección del archivo de configuración a analizar.
+ * @param {string} arrayName - El nombre del array a extraer.
+ * @return {Array} - Una lista de elementos del array especificado.
  */
-analyzeConfigFile(pathConfiFile, returnType := "extensions") {
-    if !FileExist(pathConfiFile) {
-        showTopMsgBox("El archivo de configuración no existe. Asegúrese de que '" pathConfiFile "' está en el directorio correcto y contiene las entradas válidas.", "Archivo de Configuración No Encontrado", "Error", true)
+analyzeConfigFile(pathConfigFile, section, arrayName) {
+    if !FileExist(pathConfigFile) {
+        showTopMsgBox("El archivo de configuración no existe. Asegúrese de que '" pathConfigFile "' está en el directorio correcto y contiene las entradas válidas.", "Archivo de Configuración No Encontrado", "Error", true)
         return []
     }
-    data := []
-    Loop Read, pathConfiFile {
+
+    data := Array()
+    currentSection := ""  ;; Inicializa la sección actual
+    inTargetSection := false  ;; Bandera para indicar si estamos en la sección objetivo
+    inArray := false  ;; Bandera para indicar si estamos dentro del array
+
+    Loop Read, pathConfigFile {
         line := Trim(A_LoopReadLine)
+        ;; Ignora líneas vacías o comentarios
         if (line != "" && SubStr(line, 1, 1) != "#") {
-            if (returnType = "extensions" && !InStr(line, ".")) {
-                data.Push(line)
-            } else if (returnType = "files" && InStr(line, ".")) {
-                data.Push(line)
-            } else if (returnType = "patterns" && InStr(line, "*")) {
-                data.Push(line)
+            ;; Detecta el inicio de una nueva sección
+            if (Trim(SubStr(line, 1, 1) = "[" && SubStr(line, -1, 1) = "]")) {
+                currentSection := SubStr(line, 2, -1)  ;; Extrae el nombre de la sección
+                inTargetSection := (currentSection = section)  ;; Comprueba si es la sección objetivo
+                continue
+            }
+
+            ;; Si estamos en la sección objetivo
+            if inTargetSection {
+                ;; Detecta el inicio del array
+                if (InStr(line, arrayName) && InStr(line, "=")) {
+                    inArray := !parseArrayContent(line, data) ;; La salida evalua si el array aun esta sin terminar
+                    continue
+                }
+
+                if (inArray) {
+                    inArray := !parseArrayContent(line, data)
+                }
             }
         }
     }
-    return data
+
+    return removeDuplicates(data)  ; Elimina elementos duplicados de la lista y la devuelve
+}
+
+parseArrayContent(lineContent, data) {
+    isEnd := false
+
+    if InStr(lineContent, "[")
+        lineContent := SubStr(lineContent, InStr(lineContent, "[") + 1)  ;; Extrae el contenido del array después de '['
+
+    ;; Procesa cada elemento del array en la misma línea
+    ;; Dividir el contenido en elementos separados por comas
+    for index, item in StrSplit(lineContent, ",") {
+        ; showTopMsgBox("lineContent[" index "]", item)
+
+        ;; Si se encuentra un ']' sin comillas, finalizar la lectura del array
+        if (SubStr(item, -1, 1) = "]") {
+
+            item := Trim(StrReplace(StrReplace(SubStr(item, 1, StrLen(item) - 1), '"'), "'"))
+            ; showTopMsgBox("lineContent[" index "]", item)
+
+            isEnd := true
+        }
+
+        if (!isEnd) {
+            ;; Si no queremos que contengan espacios usamos `trim`
+            item := Trim(StrReplace(StrReplace(item, '"'), "'"))  ;; Elimina comillas y espacios
+            ; item := StrReplace(StrReplace(item, '"'), "'")  ;; Elimina comillas
+            ; showTopMsgBox("lineContent[" index "]", item)
+        }
+
+        if (item != "") {
+            ; showTopMsgBox("lineContent[" index "]", item)
+            data.Push(item)  ;; Agrega el elemento a la lista de datos
+            if (isEnd)
+                return isEnd
+        }
+    }
+    return isEnd
 }
 
 /**
@@ -365,7 +474,7 @@ generateTempFileName(prefix) {
 }
 
 /**
- * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
+ * * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
  * @param {string} message - El mensaje a mostrar en el MsgBox.
  * @param {string} title - El título del MsgBox.
  * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question, Default).
@@ -399,9 +508,9 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
             if (message = "" and title = "") {
                 message := ""
             } else if (message != "" and title != "") {
-                message := message ":`n`"" title "`""
+                message := message ':`n"' title '"'
             } else if (message = "" and title != "") {
-                message := "`"" title "`""
+                message := '"' title '"'
             } else if (title != "" and message = "") {
                 message := title
             }
@@ -425,8 +534,8 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
  */
 init() {
-    global confiFiles
-    fileConfi := confiFiles.filesContents
+    global confiFileTreeGen
+    fileConfi := confiFileTreeGen
 
     if (!FileExist(fileConfi)) {
         message := "El archivo requerido '" fileConfi "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene datos válidos, uno por línea, sin comentarios o espacios en blanco."
@@ -465,7 +574,7 @@ processFolder(folderPath) {
     }
 
     ; Normalizar la ruta
-    folderPath := cleanFolderPath(folderPath)
+    folderPath := normalizePath(folderPath)
 
     if (!folderPath = false) {
         folderEdit.Value := folderPath
@@ -587,34 +696,56 @@ generateDirectoryTree() {
  * * Genera el contenido de los archivos de la carpeta seleccionada.
  */
 generateFilesContents() {
-    global mainFolderPath, tempFiles, confiFiles
+    global mainFolderPath, tempFiles, confiFileTreeGen
 
     temp := tempFiles.filesContents
-    fileConfi := confiFiles.filesContents
 
-    fileList := ""
-    allowedExtensions := analyzeConfigFile(fileConfi, "extensions") ; Cargar extensiones permitidas desde archivo
+    allowedExtensions := removeDuplicates(
+        combineArrays(
+            analyzeConfigFile(confiFileTreeGen, "AllDefault", "allowed_extensions"),
+            analyzeConfigFile(confiFileTreeGen, "FilesContents", "allowed_extensions")
+        )
+    )
     if (allowedExtensions.Length = 0) {
-        showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" fileConfi "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
+        showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" confiFileTreeGen "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
         return 1
     }
-    mainFolder := getMainFolderName(mainFolderPath)
 
-    ignoredFiles := analyzeConfigFile(fileConfi, "files") ; Cargar archivos completos desde archivo
+    ignoredFiles := removeDuplicates(
+        combineArrays(
+            analyzeConfigFile(confiFileTreeGen, "AllDefault", "ignored_files"),
+            analyzeConfigFile(confiFileTreeGen, "FilesContents", "ignored_files")
+        )
+    )
 
-    ; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
+    newIgnoredFiles := Array()
+    ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
-        ignoredFiles[index] := cleanPath(item)
-        ; showTopMsgBox("ignoredFiles[" index "]", ignoredFiles[index])
+        cleanItem := normalizePath(item, mainFolderPath)
+        ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem)
+
+        if (cleanItem) {
+            newIgnoredFiles.Push(cleanItem)
+        }
     }
+
+    ignoredFiles := newIgnoredFiles
+
+    ;; Se vuelven a eliminar los duplicados porque ahora se comprarn con la ruta absoluta para evitar rutas relativas repetidas.
+    ignoredFiles := removeDuplicates(ignoredFiles)
+
+    for index, item in ignoredFiles {
+        showTopMsgBox("ignoredFiles[" index "]", item)
+    }
+
 
     fileArray := []
     Loop Files, mainFolderPath "\*.*", "R" {
-        ; Obtener la ruta relativa al directorio principal
+        ;; Obtener la ruta relativa al directorio principal
         relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
-        ; Obtener la extensión del archivo
+        ;; Obtener la extensión del archivo
         fileExt := StrLower(StrSplit(A_LoopFileFullPath, ".").Pop())
-        ; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
+        ;; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
         if hasValue(allowedExtensions, fileExt) && !hasValue(ignoredFiles, A_LoopFileFullPath) {
             ; showTopMsgBox(relativePath, A_LoopFileFullPath)
             fileArray.Push(relativePath)
@@ -646,7 +777,7 @@ generateFilesContents() {
         }
     }
 
-    ; Escribir los contenidos en un archivo de salida
+    ;; Escribir los contenidos en un archivo de salida
     fileDel(temp)
     FileAppend(fileList, temp, "UTF-8")
 }
@@ -677,7 +808,7 @@ clearTemp() {
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
 mergeFiles() {
-    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles, confiFiles
+    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles
 
     outputContent := "## Índice (File Tree Generation)`n"
     output := tempFiles.output
