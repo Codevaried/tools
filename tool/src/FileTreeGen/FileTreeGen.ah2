@@ -19,7 +19,7 @@
  */
 
 
-;todo---SECTION: GLOBAL VARIABLES
+;todo---MARK: GLOBAL VARIABLES
 
 /**
  * ? Objeto principal que contiene la configuración y metadatos del programa.
@@ -62,7 +62,7 @@ global tempFiles := {
 global isGenerating := false
 
 
-;todo---SECTION: Environment configuration
+;todo---MARK: Environment configuration
 
 A_MaxHotkeysPerInterval := 1000
 KeyHistory 0
@@ -71,7 +71,7 @@ SetWinDelay 0
 SetKeyDelay -1, -1
 
 
-;todo---SECTION: Development Hotkeys
+;todo---MARK: Development Hotkeys
 
 ;! Uso solo para modo desarollo
 #HotIf !A_IsCompiled
@@ -84,7 +84,7 @@ SetKeyDelay -1, -1
 #HotIf
 
 
-;todo---SECTION: GUI Management
+;todo---MARK: GUI Management
 
 /**
  * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
@@ -203,16 +203,25 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
 }
 
 
-;todo---SECTION: Utility Functions
+;todo---MARK: Generic Utility Functions
+
+
+;
+;
+;
+
+
+;;MARK:*
+;^----------------Array----------------^;
 
 /**
- * * Verifica si un valor está en una lista.
- * @param {Array} list - La lista a verificar.
+ * * Verifica si un array contiene un valor específico.
+ * @param {Array} array - El array en el que buscar.
  * @param {string} value - El valor a buscar.
  * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
  */
-hasValue(list, value) {
-    for item in list {
+arrayHasValue(array, value) {
+    for item in array {
         if (item = value)
             return true
     }
@@ -235,20 +244,6 @@ removeDuplicates(arr) {
 }
 
 /**
- * * Verifica si un array contiene un valor específico.
- * @param {Array} this - El array en el que buscar.
- * @param {string} valueToFind - El valor a buscar en el array.
- * @return {boolean} - Verdadero si el valor se encuentra en el array, falso si no.
- */
-arrayHasValue(this, valueToFind) {
-    for index, value in this {
-        if value = valueToFind
-            return true
-    }
-    return false
-}
-
-/**
  * * Combina múltiples arrays en uno solo.
  * @param {Array} arrays - Uno o más arrays a combinar.
  * @return {Array} - Un nuevo array que contiene todos los elementos de los arrays proporcionados.
@@ -263,6 +258,18 @@ combineArrays(arrays*) {
     return combinedArray
 }
 
+;;MARK:*
+;^----------------Files----------------^;
+
+/**
+ * * Elimina un archivo si existe.
+ * @param {string} file - La ruta del archivo a eliminar.
+ */
+fileDel(file) {
+    if FileExist(file)
+        FileDelete(file)
+}
+
 /**
  * * Obtiene el nombre de la carpeta actual de una ruta.
  * @param {string} folderPath - La ruta de la carpeta.
@@ -274,18 +281,6 @@ getCurrentFolderName(folderPath) {
 
     ; Devolver el nombre de la carpeta actual
     return OutDirName
-}
-
-/**
- * * Valida si una ruta es una carpeta válida.
- * @param {string} path - La ruta a validar.
- * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
- */
-isValidFolder(path) {
-    if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
-        return false
-    }
-    return true
 }
 
 /**
@@ -332,7 +327,98 @@ getFileExtension(filePath) {
     SplitPath(filePath, , , &OutExtension)
 
     ; Devolver la extensión (si existe) o una cadena vacía
-    return OutExtension
+    return StrLower(OutExtension)
+}
+
+/**
+ * * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
+ * @param {string} prefix - El prefijo para el nombre del archivo.
+ * @return {string} - El nombre del archivo temporal generado.
+ */
+generateTempFileName(prefix) {
+    randomNumber := Random(100000, 999999)
+    return prefix "-" randomNumber ".tmp"
+}
+
+;;MARK:*
+;^----------------Other----------------^;
+
+/**
+ * * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
+ * @param {string} message - El mensaje a mostrar en el MsgBox.
+ * @param {string} title - El título del MsgBox.
+ * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question, Default).
+ * @param {boolean} async - Si es verdadero, muestra el MsgBox asincrónicamente.
+ */
+showTopMsgBox(message := "", title := "", type := "Default", async := false) {
+    ; Convertir el tipo de mensaje a minúsculas para que el switch no distinga entre mayúsculas y minúsculas
+    type := StrLower(type)
+
+    ; Determinar el ícono basado en el tipo de mensaje
+    switch type {
+        case "error":
+            icon := 0x10 ; Ícono de error
+        case "warning":
+            icon := 0x30 ; Ícono de advertencia
+        case "info":
+            icon := 0x40 ; Ícono de información
+        case "question":
+            icon := 0x20 ; Ícono de pregunta
+        default:
+            ; Capturar el número de línea utilizando una excepción
+            try {
+                ; Forzar una excepción para capturar el contexto de la llamada
+                throw ValueError("Capturing line number", -1)
+            } catch ValueError as err {
+                callerLine := err.Line
+            }
+            icon := 0 ; Sin ícono por defecto
+
+            ; Formatear el mensaje según las combinaciones de message y title
+            if (message = "" and title = "") {
+                message := ""
+            } else if (message != "" and title != "") {
+                message := message ':`n"' title '"'
+            } else if (message = "" and title != "") {
+                message := '"' title '"'
+            } else if (title != "" and message = "") {
+                message := title
+            }
+
+            title := "Line: " callerLine
+    }
+
+    ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
+    if async {
+        SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1)
+    } else {
+        ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
+        MsgBox(message, title, icon | 0x40000)
+    }
+}
+
+
+;todo---MARK: Utility Functions
+
+
+;
+;
+;
+
+
+;;MARK:*
+;^----------------Files----------------^;
+
+/**
+ * * Valida si una ruta es una carpeta válida.
+ * @param {string} path - La ruta a validar.
+ * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
+ */
+isValidFolder(path) {
+    if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
+        return false
+    }
+    return true
 }
 
 /**
@@ -419,72 +505,52 @@ parseArrayContent(lineContent, data) {
     return isEnd
 }
 
-/**
- * * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
- * @param {string} prefix - El prefijo para el nombre del archivo.
- * @return {string} - El nombre del archivo temporal generado.
- */
-generateTempFileName(prefix) {
-    randomNumber := Random(100000, 999999)
-    return prefix "-" randomNumber ".tmp"
-}
+
+;todo---MARK: Process Management
+
+
+;
+;
+;
+
+
+;;MARK:*
+;^----------------Checks----------------^;
 
 /**
- * * Muestra un MsgBox siempre en la parte superior con un ícono según el tipo de mensaje.
- * @param {string} message - El mensaje a mostrar en el MsgBox.
- * @param {string} title - El título del MsgBox.
- * @param {string} type - El tipo de mensaje (Error, Warning, Info, Question, Default).
- * @param {boolean} async - Si es verdadero, muestra el MsgBox asincrónicamente.
+ * * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
+ * @return {boolean} - Verdadero si el proceso está en curso, falso en caso contrario.
  */
-showTopMsgBox(message := "", title := "", type := "Default", async := false) {
-    ; Convertir el tipo de mensaje a minúsculas para que el switch no distinga entre mayúsculas y minúsculas
-    type := StrLower(type)
-
-    ; Determinar el ícono basado en el tipo de mensaje
-    switch type {
-        case "error":
-            icon := 0x10 ; Ícono de error
-        case "warning":
-            icon := 0x30 ; Ícono de advertencia
-        case "info":
-            icon := 0x40 ; Ícono de información
-        case "question":
-            icon := 0x20 ; Ícono de pregunta
-        default:
-            ; Capturar el número de línea utilizando una excepción
-            try {
-                ; Forzar una excepción para capturar el contexto de la llamada
-                throw ValueError("Capturing line number", -1)
-            } catch ValueError as err {
-                callerLine := err.Line
-            }
-            icon := 0 ; Sin ícono por defecto
-
-            ; Formatear el mensaje según las combinaciones de message y title
-            if (message = "" and title = "") {
-                message := ""
-            } else if (message != "" and title != "") {
-                message := message ':`n"' title '"'
-            } else if (message = "" and title != "") {
-                message := '"' title '"'
-            } else if (title != "" and message = "") {
-                message := title
-            }
-
-            title := "Line: " callerLine
-    }
-
-    ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
-    if async {
-        SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1)
-    } else {
-        ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
-        MsgBox(message, title, icon | 0x40000)
+checkIfGenerating() {
+    global isGenerating
+    if (isGenerating) {
+        showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
+        return true
     }
 }
 
+/**
+ * * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
+ */
+checkAndGenerateDirectoryTree() {
+    global directoryTreeCheckbox
+    if (directoryTreeCheckbox.Value) {
+        return generateDirectoryTree()
+    }
+}
 
-;todo---SECTION: Process Management
+/**
+ * * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
+ */
+checkAndGenerateFilesContents() {
+    global fileContentsCheckbox
+    if (fileContentsCheckbox.Value) {
+        return generateFilesContents()
+    }
+}
+
+;;MARK:*
+;^----------------Process----------------^;
 
 /**
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
@@ -501,18 +567,6 @@ init() {
 
     ; Inicializar la GUI
     createGui()
-}
-
-/**
- * * Verifica si el proceso de generación está en curso y muestra un mensaje si es así.
- * @return {boolean} - Verdadero si el proceso está en curso, falso en caso contrario.
- */
-checkIfGenerating() {
-    global isGenerating
-    if (isGenerating) {
-        showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
-        return true
-    }
 }
 
 /**
@@ -574,28 +628,8 @@ endGeneration() {
     myGui["GenerateText"].Value := "Generate:"  ; Cambia el texto de vuelta a "Generate:"
 }
 
-/**
- * * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
- */
-checkAndGenerateDirectoryTree() {
-    global directoryTreeCheckbox
-    if (directoryTreeCheckbox.Value) {
-        return generateDirectoryTree()
-    }
-}
 
-/**
- * * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
- */
-checkAndGenerateFilesContents() {
-    global fileContentsCheckbox
-    if (fileContentsCheckbox.Value) {
-        return generateFilesContents()
-    }
-}
-
-
-;todo---SECTION: Directory Tree Generation
+;todo---MARK: Directory Tree Generation
 
 /**
  * * Genera el árbol de archivos de la carpeta seleccionada.
@@ -646,7 +680,7 @@ generateDirectoryTree() {
 }
 
 
-;todo---SECTION: Files Contents Generation
+;todo---MARK: Files Contents Generation
 
 /**
  * * Genera el contenido de los archivos de la carpeta seleccionada.
@@ -696,17 +730,36 @@ generateFilesContents() {
 
 
     fileArray := []
+
+    ;; Crear una lista de carpetas a ignorar
+    ignoreDirs := []
+    for each, item in ignoredFiles {
+        if (DirExist(item))  ;; Si es un directorio
+            ignoreDirs.Push(item)
+    }
+
     Loop Files, mainFolderPath "\*.*", "R" {
         ;; Obtener la ruta relativa al directorio principal
         relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
         ;; Obtener la extensión del archivo
-        fileExt := StrLower(StrSplit(A_LoopFileFullPath, ".").Pop())
+        fileExt := getFileExtension(A_LoopFileFullPath)
+
+        ;; Verificar si el archivo o su carpeta está en la lista de ignorados
+        ignoreFile := false
+        for dir in ignoreDirs {
+            if (InStr(A_LoopFileFullPath, dir "\") = 1) {
+                ignoreFile := true
+                break
+            }
+        }
+
         ;; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
-        if hasValue(allowedExtensions, fileExt) && !hasValue(ignoredFiles, A_LoopFileFullPath) {
+        if !ignoreFile && arrayHasValue(allowedExtensions, fileExt) && !arrayHasValue(ignoredFiles, A_LoopFileFullPath) {
             ; showTopMsgBox(relativePath, A_LoopFileFullPath)
             fileArray.Push(relativePath)
         }
     }
+
 
     if (fileArray.Length = 0) {
         fileList := "**[Aviso: No Hay Archivos que Coincidan con la Configuracion Actual]**"
@@ -739,16 +792,7 @@ generateFilesContents() {
 }
 
 
-;todo---SECTION: File Management
-
-/**
- * * Elimina un archivo si existe.
- * @param {string} file - La ruta del archivo a eliminar.
- */
-fileDel(file) {
-    if FileExist(file)
-        FileDelete(file)
-}
+;todo---MARK: File Management
 
 /**
  * * Elimina archivos temporales utilizados durante el procesamiento.
@@ -777,7 +821,7 @@ mergeFiles() {
     if (fileContentsCheckbox.Value)
         outputContent .= "- [Contenido de los archivos](#Files-Contents)`n`n"
 
-    ; Agregar el contenido del árbol de directorios si está seleccionado
+    ;; Agregar el contenido del árbol de directorios si está seleccionado
     if (directoryTreeCheckbox.Value) {
         try {
             fileTree := FileRead(tempFiles.dirTree, "UTF-8")
@@ -787,7 +831,7 @@ mergeFiles() {
         }
     }
 
-    ; Agregar el contenido de los archivos si está seleccionado
+    ;; Agregar el contenido de los archivos si está seleccionado
     if (fileContentsCheckbox.Value) {
         try {
             fileContents := FileRead(tempFiles.filesContents, "UTF-8")
@@ -797,7 +841,7 @@ mergeFiles() {
         }
     }
 
-    ; Escribir el contenido combinado en `output`
+    ;; Escribir el contenido combinado en `output`
     try {
         FileDelete(output)
         FileAppend(outputContent, output, "UTF-8")
@@ -806,7 +850,7 @@ mergeFiles() {
         return
     }
 
-    ; Copiar el contenido final al portapapeles
+    ;; Copiar el contenido final al portapapeles
     A_Clipboard := outputContent
     if !ClipWait(2) {
         showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
@@ -816,6 +860,17 @@ mergeFiles() {
     showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
+
+;todo---MARK: Initialization
+
+
+;
+;
+;
+
+
+;;MARK:*
+;^----------------Init----------------^;
 
 ;* Inicializa el programa.
 init()
