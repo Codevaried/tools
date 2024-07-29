@@ -7,29 +7,17 @@
 tree_tests
 │   1.txt
 │   
-├───1
-│   │   2.txt
-│   │   
-│   ├───a
-│   │       a.txt
-│   │       
-│   ├───b
-│   │       b.md
-│   │       
-│   ├───c
-│   │       c.exe
-│   │       
-│   └───d
-│           d.js
-│           
-└───node_modules
+└───1
     │   2.txt
     │   
     ├───a
     │       a.txt
     │       
-    └───b
-            b.js
+    ├───b
+    │       b.md
+    │       
+    └───d
+            d.js
             
 ```
 
@@ -50,4 +38,21 @@ File in the secondary path
 Line 1
 Line 2
 Text Text
+````
+
+#### Archivo `1\b\b.md`: 
+````md 
+##### Line 1
+##### Line 2
+
+```
+MarkDown code
+```
+````
+
+#### Archivo `1\d\d.js`: 
+````js 
+console.log("Line 1");
+console.log("Line 2");
+// JavaScript comment
 ````

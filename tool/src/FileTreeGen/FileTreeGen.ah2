@@ -31,7 +31,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v1.5",
+    version: "v2.0",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -40,19 +40,34 @@ global PROGRAM := {
 PROGRAM.fullDescription := PROGRAM.name " " PROGRAM.version " - " PROGRAM.description
 
 /**
- * ! Archivos de configuración del programa.
+ * ? Archivos de configuración del programa.
  * @global {Object}
+ * @property {string} confiFileTreeGen - Archivo de configuración que contiene las extensiones permitidas y los archivos ignorados.
  */
-global confiFileTreeGen := "FileTreeGen.conf" ; Archivo de configuracion que contiene las extensiones permitidas y los archivos ignorados en el proceso "Files Contents"
+global confiFileTreeGen := "FileTreeGen.conf"
+
+;;MARK:*
+;^----------------Temporary Directories----------------^;
 
 /**
- * ! Archivos temporales utilizados durante la ejecución del programa.
+ * ? Nombre del directorio principal temporal.
+ * @global {string}
+ */
+global tempMainDir := A_Temp "\" generateTempName("FileTreeGen")
+
+/**
+ * ? Archivos temporales utilizados durante la ejecución del programa.
  * @global {Object}
+ * @property {string} dir_filesTree - Directorio temporal para almacenar el árbol de archivos.
+ * @property {string} file_dirTree - Archivo temporal para el árbol de directorios.
+ * @property {string} file_filesContents - Archivo temporal para los contenidos de archivos.
+ * @property {string} output - Archivo de salida combinado.
  */
 global tempFiles := {
-    dirTree: generateTempFileName("tree_output"), ; Archivo temporal para el árbol de directorios
-    filesContents: generateTempFileName("filesContents_output"), ; Archivo temporal para los contenidos de archivos
-    output: "output.md" ; Archivo de salida combinado
+    dir_filesTree: tempMainDir "\FilesTree",
+    file_dirTree: tempMainDir "\tree_output.tmp",                ; Archivo temporal para el árbol de directorios
+    file_filesContents: tempMainDir "\filesContents_output.tmp", ; Archivo temporal para los contenidos de archivos
+    output: "output.md"                                          ; Archivo de salida combinado
 }
 
 /**
@@ -271,6 +286,15 @@ fileDel(file) {
 }
 
 /**
+ * * Elimina un directorio si existe.
+ * @param {string} dir - La ruta de la carpeta a eliminar.
+ */
+dirDel(dir) {
+    if DirExist(dir)
+        DirDelete(dir, true)
+}
+
+/**
  * * Obtiene el nombre de la carpeta actual de una ruta.
  * @param {string} folderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
@@ -331,14 +355,19 @@ getFileExtension(filePath) {
 }
 
 /**
- * * Genera un nombre de archivo temporal aleatorio con un prefijo especificado.
+ * * Genera un nombre temporal utilizando un prefijo y el identificador único de la instancia del programa mas su extension `.tmp`.
  * @param {string} prefix - El prefijo para el nombre del archivo.
  * @return {string} - El nombre del archivo temporal generado.
  */
-generateTempFileName(prefix) {
-    randomNumber := Random(100000, 999999)
-    return prefix "-" randomNumber ".tmp"
-}
+generateTempFileName(prefix) => prefix "-" A_ScriptHwnd ".tmp"
+
+/**
+ * * Genera un nombre temporal utilizando un prefijo y el identificador único de la instancia del programa.
+ * @param {string} prefix - El prefijo para el nombre temporal.
+ * @returns {string} - El nombre temporal generado.
+ */
+generateTempName(prefix) => prefix "-" A_ScriptHwnd
+
 
 ;;MARK:*
 ;^----------------Other----------------^;
@@ -660,7 +689,6 @@ getAllowedExtensions(section, arrayName) {
     return allowedExtensions
 }
 
-
 getIgnoredFiles(section, arrayName) {
     ignoredFiles := getAnalyzeConfigFile(section, arrayName)
 
@@ -687,6 +715,49 @@ getIgnoredFiles(section, arrayName) {
     return ignoredFiles
 }
 
+createDir_filesTree(allowedExtensions, ignoredFiles) {
+    global mainFolderPath, tempFiles
+
+    tempFolderPath := tempFiles.dir_filesTree
+
+    ;; Crear una copia temporal del directorio principal con solo los archivos permitidos
+    DirCreate(tempFolderPath)
+
+    ignoreDirs := Array()
+    for item in ignoredFiles {
+        if (DirExist(item))  ;; Si es un directorio
+            ignoreDirs.Push(item)
+    }
+
+    Loop Files, mainFolderPath "\*.*", "R" {
+        relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
+        fileExt := getFileExtension(A_LoopFileFullPath)
+
+        ;; Verificar si el archivo o su carpeta está en la lista de ignorados
+        ignoreFile := false
+        for dir in ignoreDirs {
+            if (InStr(A_LoopFileFullPath, dir "\") = 1) {
+                ignoreFile := true
+                break
+            }
+        }
+
+        ;; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
+        if !ignoreFile && arrayHasValue(allowedExtensions, fileExt) && !arrayHasValue(ignoredFiles, A_LoopFileFullPath) {
+            destPath := tempFolderPath "\" relativePath
+
+            ; showTopMsgBox("destPath", destPath)
+
+            ;; Crear el directorio si no existe
+            if !FileExist(StrReplace(destPath, "\*.*", "")) {
+                SplitPath(destPath, , &OutDir)
+                DirCreate(OutDir)
+            }
+            FileCopy(A_LoopFileFullPath, destPath)
+        }
+    }
+}
+
 
 ;;MARK:*
 ;^----------------Directory Tree Generation----------------
@@ -703,19 +774,22 @@ getIgnoredFiles(section, arrayName) {
  * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
  */
 generateDirectoryTree() {
-    global mainFolderPath, tempFiles
-    temp := tempFiles.dirTree
+    global mainFolderPath, tempMainDir, tempFiles
+    temp := tempFiles.file_dirTree
 
+    tempFolderPath := tempFiles.dir_filesTree
 
-    ;!(DESAROLLO) Obtenemos la informacion de los archivos requerida
-    allowedExtensions := getAllowedExtensions("FilesContents", "allowed_extensions")
+    ;; Obtenemos la información de los archivos requerida
+    allowedExtensions := getAllowedExtensions("DirectoryTree", "allowed_extensions")
     if (allowedExtensions = 1)
         return 1 ;; Error no hay extensiones permitidas
-    ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
+    ignoredFiles := getIgnoredFiles("DirectoryTree", "ignored_files")
 
+    createDir_filesTree(allowedExtensions, ignoredFiles)
 
     ;; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" mainFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
+    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" tempFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
+
     RunWait(command, , "Hide")
     if (A_LastError) {
         showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al generar el árbol de archivos", "Error", true)
@@ -724,6 +798,10 @@ generateDirectoryTree() {
 
     ;; Leer el archivo de salida y eliminar las dos primeras líneas
     fileTree := FileRead(temp, "UTF-8")
+
+    ;; Una vez leido el archivo eliminamos el arbol de archivos
+    dirDel(tempFolderPath)
+
     fileTreeArray := StrSplit(fileTree, "`n")
     ;; Eliminar las dos primeras líneas
     fileTreeArray.RemoveAt(1)
@@ -731,13 +809,13 @@ generateDirectoryTree() {
 
     ;; Obtener el nombre de la carpeta principal
     folderName := getCurrentFolderName(mainFolderPath)
-
     ;; Reemplazar la primera línea con el nombre de la carpeta principal
     fileTreeArray[1] := folderName
-    ;; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones, y omitir líneas que contengan el valor de temp
+
+    ;; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones
     fileTreeNew := "``````tree`n"
     for line in fileTreeArray {
-        if (StrLen(Trim(line)) > 0 && !InStr(line, temp)) {
+        if (Trim(line) != "") {
             fileTreeNew .= line "`n"
         }
     }
@@ -758,7 +836,8 @@ generateDirectoryTree() {
 generateFilesContents() {
     global mainFolderPath, tempFiles
 
-    temp := tempFiles.filesContents
+    temp := tempFiles.file_filesContents
+    tempFolderPath := tempFiles.dir_filesTree
 
     ;; Obtenemos la informacion de los archivos requerida
     allowedExtensions := getAllowedExtensions("FilesContents", "allowed_extensions")
@@ -767,35 +846,15 @@ generateFilesContents() {
     ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
 
 
-    fileArray := []
+    fileArray := Array()
 
-    ;; Crear una lista de carpetas a ignorar
-    ignoreDirs := []
-    for each, item in ignoredFiles {
-        if (DirExist(item))  ;; Si es un directorio
-            ignoreDirs.Push(item)
-    }
+    createDir_filesTree(allowedExtensions, ignoredFiles)
 
-    Loop Files, mainFolderPath "\*.*", "R" {
+    Loop Files, tempFolderPath "\*.*", "R" {
         ;; Obtener la ruta relativa al directorio principal
-        relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
-        ;; Obtener la extensión del archivo
-        fileExt := getFileExtension(A_LoopFileFullPath)
+        relativePath := StrReplace(A_LoopFileFullPath, tempFolderPath "\")
 
-        ;; Verificar si el archivo o su carpeta está en la lista de ignorados
-        ignoreFile := false
-        for dir in ignoreDirs {
-            if (InStr(A_LoopFileFullPath, dir "\") = 1) {
-                ignoreFile := true
-                break
-            }
-        }
-
-        ;; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
-        if !ignoreFile && arrayHasValue(allowedExtensions, fileExt) && !arrayHasValue(ignoredFiles, A_LoopFileFullPath) {
-            ; showTopMsgBox(relativePath, A_LoopFileFullPath)
-            fileArray.Push(relativePath)
-        }
+        fileArray.Push(relativePath)
     }
 
 
@@ -825,7 +884,7 @@ generateFilesContents() {
     }
 
     ;; Escribir los contenidos en un archivo de salida
-    fileDel(temp)
+    dirDel(tempFolderPath)
     FileAppend(fileList, temp, "UTF-8")
 }
 
@@ -836,9 +895,8 @@ generateFilesContents() {
  * * Elimina archivos temporales utilizados durante el procesamiento.
  */
 clearTemp() {
-    global tempFiles
-    fileDel(tempFiles.dirTree)
-    fileDel(tempFiles.filesContents)
+    global tempMainDir
+    dirDel(tempMainDir)
 }
 
 /**
@@ -862,7 +920,7 @@ mergeFiles() {
     ;; Agregar el contenido del árbol de directorios si está seleccionado
     if (directoryTreeCheckbox.Value) {
         try {
-            fileTree := FileRead(tempFiles.dirTree, "UTF-8")
+            fileTree := FileRead(tempFiles.file_dirTree, "UTF-8")
             outputContent .= "### Directory Tree:`n" fileTree spacer
         } catch {
             showTopMsgBox("No se pudo leer dirTree.tmp.", "Error al Leer Archivo de Árbol de Directorios", "Error", true)
@@ -872,7 +930,7 @@ mergeFiles() {
     ;; Agregar el contenido de los archivos si está seleccionado
     if (fileContentsCheckbox.Value) {
         try {
-            fileContents := FileRead(tempFiles.filesContents, "UTF-8")
+            fileContents := FileRead(tempFiles.file_filesContents, "UTF-8")
             outputContent .= "### Files Contents:`n" fileContents
         } catch {
             showTopMsgBox("No se pudo leer filesContents.tmp.", "Error al Leer Archivo de Contenido de Archivos", "Error", true)
@@ -888,14 +946,14 @@ mergeFiles() {
         return
     }
 
-    ; ;; Copiar el contenido final al portapapeles
-    ; A_Clipboard := outputContent
-    ; if !ClipWait(2) {
-    ;     showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
-    ;     return
-    ; }
+    ;; Copiar el contenido final al portapapeles
+    A_Clipboard := outputContent
+    if !ClipWait(2) {
+        showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
+        return
+    }
 
-    ; showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
+    showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
 

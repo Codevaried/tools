@@ -1,11 +1,10 @@
-## Índice de la Documentación de FileTreeGen v1.5
+## Índice de la Documentación de FileTreeGen v2.0
 
 - [Introducción](#introducción)
 - [Funcionalidades Principales](#funcionalidades-principales)
 - [Requisitos](#requisitos)
 - [Árbol de directorios](#Directory-Tree)
-- [Contenido de los archivos](#Files-Contents)
-  - [FilesContents.conf](#filescontentsconf)
+- [Configuración FileTreeGen](#Configuración-FileTreeGen)
 - [Resumen del Código](#resumen-del-código)
 - [Ejecución del Programa](#ejecución-del-programa)
 - [Ejemplo de Uso](#ejemplo-de-uso)
@@ -15,7 +14,7 @@
 
 ### Introducción
 
-**FileTreeGen** es un programa desarrollado en AutoHotkey v2.0.18 que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v1.5**.
+**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.0**.
 
 ### Funcionalidades Principales
 
@@ -27,8 +26,8 @@
 
 ### Requisitos
 
-- AutoHotkey v2.0.18 o superior (si se usa el script .ah2).
-- Archivo `FilesContents.conf` que contiene las extensiones permitidas y archivos ignorados.
+- AutoHotkey **v2.0.18** o superior (si se usa el script .ah2).
+- Archivo **FileTreeGen.conf** que contiene las extensiones permitidas y archivos ignorados.
 - Carpeta de destino con los archivos a procesar.
 
 ### Directory Tree
@@ -37,130 +36,134 @@ El árbol de directorios del proyecto es el siguiente:
 
 ```tree
 FileTreeGen
-│   FilesContents.conf
 │   FileTreeGen.ah2
+│   FileTreeGen.conf
 │   output.md
 │   README.md
 │
 ├───bin
-│       FileTreeGen.exe
-│       FileTreeGen.ico
-│
-├───files_tests
-│       ..file
-│       .1.file
-│       .file
-│       1..file
-│       1.file
-│       false
-│       file
-│       true
+│       FileTreeGen.conf
+│       output.md
 │
 └───tree_tests
     │   1.txt
     │
-    └───1
+    ├───1
+    │   │   2.txt
+    │   │
+    │   ├───a
+    │   │       a.txt
+    │   │
+    │   ├───b
+    │   │       b.md
+    │   │
+    │   └───d
+    │           d.js
+    │
+    └───node_modules
         │   2.txt
         │
         ├───a
         │       a.txt
         │
-        ├───b
-        │       b.md
-        │
-        ├───c
-        │       c.exe
-        │
-        └───d
-                d.js
+        └───b
+                b.js
+
 ```
 
-### Files Contents
+#### Configuración FileTreeGen
 
-#### FilesContents.conf
-
-Este archivo contiene la configuración de las extensiones de archivos permitidas y los archivos que deben ser ignorados durante el procesamiento.
+Este archivo **FileTreeGen.conf** contiene la configuración de las extensiones de archivos permitidas y los archivos que deben ser ignorados durante el procesamiento.
 
 ```conf
 #*** Configuración para el procesamiento de contenidos de archivos
 
 ##? ♦ Extensiones de Archivos Permitidas
 #; Define las extensiones de archivo permitidas para el procesamiento.
-#; Cada línea debe contener una extensión sin el punto inicial.
-#; Se ignoran las líneas que comienzan con "#" y las que contienen un "." (indicando archivos completos).
-
-###* Extensiones de Archivos de Texto
-txt
-md
-csv
-log
-ini
-rtf
-tex
-
-###* Extensiones de Lenguajes de Programación
-ahk
-ah2
-py
-java
-cpp
-js
-ts
-html
-css
-json
-xml
-rb
-php
-sh
-bat
-ps1
-sql
-
-###* Extensiones de Archivos de Configuración y Otros
-conf
-cfg
-toml
-yaml
-yml
-properties
-
-##? ♦ Archivos Ignorados (NO Usar Patrones De Archivos)
-#; Define los archivos completos que deben ser ignorados durante el procesamiento.
-#; Cada línea debe contener la ruta completa del archivo junto con su extensión.
-#; Se pueden usar rutas absolutas y relativas.
-#; No se pueden usar patrones de búsqueda o de coincidencia de archivos.
+#; Cada línea dentro de los arrays debe contener una extensión sin el punto inicial.
 #; Se ignoran las líneas que comienzan con "#".
 
-###* Archivo de Salida Combinado
-output.md
+##? ♦ Carpetas y Archivos Ignorados (NO Usar Patrones De Coincidencia)
+#; Define los archivos completos que deben ser ignorados durante el procesamiento.
+#; Cada línea dentro de los arrays debe contener la ruta completa del archivo junto con su extensión.
+#; Se pueden usar rutas absolutas y relativas.
+#; No se pueden usar patrones de búsqueda o de coincidencia de archivos como `?` o `*`.
+#; Se ignoran las líneas que comienzan con "#".
 
-##? Tests
-#; Extensiones y archivos de pruebas que se encuentran en las carpetas `files_tests` y `tree_tests`.
+#? ♦ Sintaxis de los Arrays
+#; Los datos deben estar contenidos en arrays.
+#; No debe haber información fuera de los arrays a no ser que sean comentarios.
+#; Todas las secciones heredan los datos de la sección "AllDefault".
+#; Cada sección puede tener sus propias configuraciones de datos.
+#; Si se añaden datos a "AllDefault", se valoran en todas las demás secciones.
+#; Las secciones pueden estar vacías pero al menos debe de haber alguna extensión permitida en "AllDefault".
+#; Si no hay extensiones permitidas, no se leerá ningún archivo.
 
-###* Extensiones de Archivos de Pruebas (files_tests)
-#;💹
-# file
+############################################################
+#todo: In All Default Sections
+#^ Configuraciones predeterminadas heredadas por las demás secciones.
+[AllDefault]
 
-###* Archivos de Pruebas (files_tests)
-#;💹
-# ..file
-# .1.file
-# .file
-# 1..file
-# 1.file
+##? Extensiones de Archivos Permitidas
+allowed_extensions = [
 
-###* Archivos de Pruebas (tree_tests)
-#;💹
-# 1.txt
-# 1\d\d.js
-# .\1\..\1\d\d.js
+###* Extensiones de Archivos de Texto
+"txt","md","csv","log","ini","rtf","tex",
 
-###! En Desarrollo (Incompatible)
+###* Extensiones de Lenguajes de Programación
+"ahk","ah2","py","java","cpp","js","ts","html",
+"css","json","xml","rb","php","sh","bat","ps1",
+"sql",
+
+###* Extensiones de Archivos de Configuración y Otros
+"conf","cfg","toml","yaml","yml","properties",
+]
+
+##? Carpetas y Archivos Ignorados
+ignored_files = [
+###* Carpeta `node_modules`
+"node_modules",
+
+#! En Desarrollo (Patrones Incompatibles)
 #;⛔
-# 1\d\*.js
-# 1\d\d.*
-# 1\d\*
+# "node_modules\??.*",
+# "node_modules\*.js",
+]
+
+############################################################
+
+#todo: Directory Tree section
+#^ Configuraciones específicas para la estructura del árbol de directorios.
+[DirectoryTree]
+
+##? Extensiones de Archivos Permitidas
+allowed_extensions = [
+#; Heredadas de AllDefault
+]
+
+##? Carpetas y Archivos Ignorados
+ignored_files = [
+#; Heredadas de AllDefault
+]
+
+############################################################
+
+#todo: Files Contents section
+#^ Configuraciones específicas para el contenido de archivos.
+[FilesContents]
+
+##? Extensiones de Archivos Permitidas
+allowed_extensions = [
+#; Heredadas de AllDefault
+]
+
+##? Carpetas y Archivos Ignorados
+ignored_files = [
+###* Archivo de Salida Combinado
+"output.md",
+]
+
+############################################################
 ```
 
 ### Resumen del Código
@@ -182,13 +185,13 @@ Para ejecutar el programa, tiene dos opciones:
 
 1. **Usar el Archivo Ejecutable**: Ejecute `bin/FileTreeGen.exe` directamente. No se requiere la instalación de AutoHotkey. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
-2. **Usar el Script en AutoHotkey**: Asegúrese de tener AutoHotkey v2.0.18 instalado y ejecute `FileTreeGen.ah2`. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
+2. **Usar el Script en AutoHotkey**: Asegúrese de tener AutoHotkey **v2.0.18** instalado y ejecute **FileTreeGen.ah2**. La GUI se mostrará permitiendo la selección de una carpeta y la generación del árbol de archivos y contenidos de archivos.
 
 ### Ejemplo de Uso
 
 1. **Seleccione una Carpeta**: Puede arrastrar una carpeta a la GUI o seleccionarla manualmente utilizando el botón "Seleccionar Carpeta".
 2. **Generar Estructura y Contenido**: Asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según lo que desea generar.
-3. **Resultado**: El resultado se combinará en un archivo `output.md` y se copiará al portapapeles para facilitar su uso. La salida del texto está en formato Markdown, incluyendo al copiarse en el portapapeles.
+3. **Resultado**: El resultado se combinará en un archivo **output.md** y se copiará al portapapeles para facilitar su uso. La salida del texto está en formato Markdown, incluyendo al copiarse en el portapapeles.
 
 ### Archivos de Ejemplo
 
@@ -245,16 +248,16 @@ Estos archivos de ejemplo permiten probar la funcionalidad del programa y verifi
 
 > [!TIP]
 > Puede arrastrar y soltar una carpeta directamente en la GUI de FileTreeGen para una selección rápida. Asegúrese de que las casillas "Directory Tree" y "Files Contents" estén marcadas según sus necesidades antes de iniciar la generación.
-> También puede agregar archivos específicos que deben ser ignorados por la función Files Contents en el archivo `FilesContents.conf`. Asegúrese de listar estos archivos correctamente para que sean omitidos durante el procesamiento.
+> También puede agregar archivos específicos en el archivo **FileTreeGen.conf** que serán ignorados. Asegúrese de listar estos archivos correctamente para que sean omitidos durante el procesamiento.
 
 > [!IMPORTANT]  
-> El archivo `FilesContents.conf` debe estar presente en el directorio adecuado. Define las extensiones de archivos permitidas para la extracción de contenidos. Sin este archivo, FileTreeGen no funcionará correctamente.
+> El archivo **FileTreeGen.conf** debe estar presente en el directorio adecuado. Define las extensiones de archivos permitidas. Sin este archivo, **FileTreeGen** no funcionará correctamente.
 
 > [!WARNING]  
 > Las rutas relativas deberían funcionar correctamente. Asegúrese de proporcionar rutas relativas precisas para evitar errores en la generación de contenidos y estructuras de archivos.
 
 > [!CAUTION]
-> Los patrones de archivos como el uso de `*` o `?` aún no están implementados y pueden causar errores si se utilizan. Se planea añadir esta funcionalidad en el futuro, pero por ahora, evite usarlos. Asegúrese de que el archivo `FilesContents.conf` esté bien configurado y que las líneas estén estructuradas según la sintaxis requerida.
+> Los patrones de archivos como el uso de `*` o `?` aún no están implementados y pueden causar errores si se utilizan. Se planea añadir esta funcionalidad en el futuro, pero por ahora, evite usarlos. Asegúrese de que el archivo **FileTreeGen.conf** esté bien configurado y que las líneas estén estructuradas según la sintaxis requerida.
 
 ### Conclusión
 
