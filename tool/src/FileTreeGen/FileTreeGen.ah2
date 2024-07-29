@@ -203,7 +203,7 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
 }
 
 
-;todo---MARK: Generic Utility Functions
+;todo---MARK: Utility Functions
 
 
 ;
@@ -398,7 +398,7 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
 }
 
 
-;todo---MARK: Utility Functions
+;todo---MARK: Functions
 
 
 ;
@@ -629,84 +629,40 @@ endGeneration() {
 }
 
 
-;todo---MARK: Directory Tree Generation
-
-/**
- * * Genera el árbol de archivos de la carpeta seleccionada.
- * 
- * Posible error: Si ocurre un error al ejecutar el comando de PowerShell, puede ser debido a:
- * 1. PowerShell no está instalado o habilitado en el sistema.
- * 2. Restricciones de políticas de ejecución de scripts en PowerShell.
- * 
- * Solución: 
- * 1. Verifique que PowerShell está instalado y habilitado en su sistema.
- * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
- */
-generateDirectoryTree() {
-    global mainFolderPath, tempFiles
-    temp := tempFiles.dirTree
-    ; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" mainFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
-    RunWait(command, , "Hide")
-    if (A_LastError) {
-        showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al generar el árbol de archivos", "Error", true)
-        return 1
-    }
-
-    ; Leer el archivo de salida y eliminar las dos primeras líneas
-    fileTree := FileRead(temp, "UTF-8")
-    fileTreeArray := StrSplit(fileTree, "`n")
-    ; Eliminar las dos primeras líneas
-    fileTreeArray.RemoveAt(1)
-    fileTreeArray.RemoveAt(1)
-
-    ; Obtener el nombre de la carpeta principal
-    folderName := getCurrentFolderName(mainFolderPath)
-
-    ; Reemplazar la primera línea con el nombre de la carpeta principal
-    fileTreeArray[1] := folderName
-    ; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones, y omitir líneas que contengan el valor de temp
-    fileTreeNew := "``````tree`n"
-    for line in fileTreeArray {
-        if (StrLen(Trim(line)) > 0 && !InStr(line, temp)) {
-            fileTreeNew .= line "`n"
-        }
-    }
-    fileTreeNew .= "```````n"
-
-    ; Reescribir el archivo con las modificaciones
-    fileDel(temp)
-    FileAppend(fileTreeNew, temp, "UTF-8")
-}
+;todo---MARK: Files Generation
 
 
-;todo---MARK: Files Contents Generation
+;
+;
+;
 
-/**
- * * Genera el contenido de los archivos de la carpeta seleccionada.
- */
-generateFilesContents() {
-    global mainFolderPath, tempFiles, confiFileTreeGen
 
-    temp := tempFiles.filesContents
+;;MARK:*
+;^----------------Use analyzeConfigFile----------------
 
-    allowedExtensions := removeDuplicates(
+getAnalyzeConfigFile(section, arrayName) {
+    return removeDuplicates(
         combineArrays(
-            analyzeConfigFile(confiFileTreeGen, "AllDefault", "allowed_extensions"),
-            analyzeConfigFile(confiFileTreeGen, "FilesContents", "allowed_extensions")
+            analyzeConfigFile(confiFileTreeGen, "AllDefault", arrayName),
+            analyzeConfigFile(confiFileTreeGen, section, arrayName)
         )
     )
+}
+
+getAllowedExtensions(section, arrayName) {
+    global confiFileTreeGen
+
+    allowedExtensions := getAnalyzeConfigFile(section, arrayName)
     if (allowedExtensions.Length = 0) {
         showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" confiFileTreeGen "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
         return 1
     }
+    return allowedExtensions
+}
 
-    ignoredFiles := removeDuplicates(
-        combineArrays(
-            analyzeConfigFile(confiFileTreeGen, "AllDefault", "ignored_files"),
-            analyzeConfigFile(confiFileTreeGen, "FilesContents", "ignored_files")
-        )
-    )
+
+getIgnoredFiles(section, arrayName) {
+    ignoredFiles := getAnalyzeConfigFile(section, arrayName)
 
     newIgnoredFiles := Array()
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
@@ -727,6 +683,88 @@ generateFilesContents() {
     ; for index, item in ignoredFiles {
     ;     showTopMsgBox("ignoredFiles[" index "]", item)
     ; }
+
+    return ignoredFiles
+}
+
+
+;;MARK:*
+;^----------------Directory Tree Generation----------------
+
+/**
+ * * Genera el árbol de archivos de la carpeta seleccionada.
+ * 
+ * Posible error: Si ocurre un error al ejecutar el comando de PowerShell, puede ser debido a:
+ * 1. PowerShell no está instalado o habilitado en el sistema.
+ * 2. Restricciones de políticas de ejecución de scripts en PowerShell.
+ * 
+ * Solución: 
+ * 1. Verifique que PowerShell está instalado y habilitado en su sistema.
+ * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
+ */
+generateDirectoryTree() {
+    global mainFolderPath, tempFiles
+    temp := tempFiles.dirTree
+
+
+    ;!(DESAROLLO) Obtenemos la informacion de los archivos requerida
+    allowedExtensions := getAllowedExtensions("FilesContents", "allowed_extensions")
+    if (allowedExtensions = 1)
+        return 1 ;; Error no hay extensiones permitidas
+    ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
+
+
+    ;; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
+    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" mainFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
+    RunWait(command, , "Hide")
+    if (A_LastError) {
+        showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al generar el árbol de archivos", "Error", true)
+        return 1
+    }
+
+    ;; Leer el archivo de salida y eliminar las dos primeras líneas
+    fileTree := FileRead(temp, "UTF-8")
+    fileTreeArray := StrSplit(fileTree, "`n")
+    ;; Eliminar las dos primeras líneas
+    fileTreeArray.RemoveAt(1)
+    fileTreeArray.RemoveAt(1)
+
+    ;; Obtener el nombre de la carpeta principal
+    folderName := getCurrentFolderName(mainFolderPath)
+
+    ;; Reemplazar la primera línea con el nombre de la carpeta principal
+    fileTreeArray[1] := folderName
+    ;; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones, y omitir líneas que contengan el valor de temp
+    fileTreeNew := "``````tree`n"
+    for line in fileTreeArray {
+        if (StrLen(Trim(line)) > 0 && !InStr(line, temp)) {
+            fileTreeNew .= line "`n"
+        }
+    }
+    fileTreeNew .= "```````n"
+
+    ;; Reescribir el archivo con las modificaciones
+    fileDel(temp)
+    FileAppend(fileTreeNew, temp, "UTF-8")
+}
+
+
+;;MARK:*
+;^----------------Files Contents Generation----------------
+
+/**
+ * * Genera el contenido de los archivos de la carpeta seleccionada.
+ */
+generateFilesContents() {
+    global mainFolderPath, tempFiles
+
+    temp := tempFiles.filesContents
+
+    ;; Obtenemos la informacion de los archivos requerida
+    allowedExtensions := getAllowedExtensions("FilesContents", "allowed_extensions")
+    if (allowedExtensions = 1)
+        return 1 ;; Error no hay extensiones permitidas
+    ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
 
 
     fileArray := []
@@ -850,14 +888,14 @@ mergeFiles() {
         return
     }
 
-    ;; Copiar el contenido final al portapapeles
-    A_Clipboard := outputContent
-    if !ClipWait(2) {
-        showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
-        return
-    }
+    ; ;; Copiar el contenido final al portapapeles
+    ; A_Clipboard := outputContent
+    ; if !ClipWait(2) {
+    ;     showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
+    ;     return
+    ; }
 
-    showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
+    ; showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
 
