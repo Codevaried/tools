@@ -7,6 +7,9 @@
 /tool/src/FileTreeGen/bin/*.tmp
 /tool/src/FileTreeGen/*.tmp
 
+#* Ignorar Carpetas y Archivos Privados en desarrollo
+_*
+
 #; Ignorar archivos de logs
 logs
 *.log

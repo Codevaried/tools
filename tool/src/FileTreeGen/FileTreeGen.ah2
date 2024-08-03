@@ -4,6 +4,10 @@
 #NoTrayIcon
 */
 
+#Include "../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
+#Include "../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
+
+
 /**
  * ? Archivo principal del script de AutoHotkey v2.
  * * Este script permite generar un árbol de archivos y contenidos de archivos de una carpeta seleccionada.
@@ -15,7 +19,7 @@
  *   - Combinación de la estructura de directorios y contenido de archivos en un solo archivo de salida.
  *   - Copia del resultado final al portapapeles para facilitar su uso.
  * 
- * @autor Eloy Navarro Escarabajal
+ * @autor (CodeVaried) => Eloy Navarro Escarabajal
  */
 
 
@@ -31,7 +35,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.0",
+    version: "v2.1",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -45,6 +49,7 @@ PROGRAM.fullDescription := PROGRAM.name " " PROGRAM.version " - " PROGRAM.descri
  * @property {string} confiFileTreeGen - Archivo de configuración que contiene las extensiones permitidas y los archivos ignorados.
  */
 global confiFileTreeGen := "FileTreeGen.conf"
+
 
 ;;MARK:*
 ;^----------------Temporary Directories----------------^;
@@ -96,6 +101,8 @@ SetKeyDelay -1, -1
     Sleep(100)  ; Pequeño retraso para asegurar que el archivo se guarde
     Reload()  ; Recarga el script
 }
+
+^Esc:: ExitApp(1)
 #HotIf
 
 
@@ -227,53 +234,6 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
 
 
 ;;MARK:*
-;^----------------Array----------------^;
-
-/**
- * * Verifica si un array contiene un valor específico.
- * @param {Array} array - El array en el que buscar.
- * @param {string} value - El valor a buscar.
- * @return {boolean} - Verdadero si el valor está en la lista, falso en caso contrario.
- */
-arrayHasValue(array, value) {
-    for item in array {
-        if (item = value)
-            return true
-    }
-    return false
-}
-
-/**
- * * Elimina los elementos duplicados de un array.
- * @param {Array} arr - El array del que se eliminarán los duplicados.
- * @return {Array} - Un nuevo array sin elementos duplicados.
- */
-removeDuplicates(arr) {
-    uniqueArray := Array()
-    for item in arr {
-        if !arrayHasValue(uniqueArray, item) {
-            uniqueArray.Push(item)
-        }
-    }
-    return uniqueArray
-}
-
-/**
- * * Combina múltiples arrays en uno solo.
- * @param {Array} arrays - Uno o más arrays a combinar.
- * @return {Array} - Un nuevo array que contiene todos los elementos de los arrays proporcionados.
- */
-combineArrays(arrays*) {
-    combinedArray := []
-    for each, arr in arrays {
-        for each, item in arr {
-            combinedArray.Push(item)
-        }
-    }
-    return combinedArray
-}
-
-;;MARK:*
 ;^----------------Files----------------^;
 
 /**
@@ -299,13 +259,7 @@ dirDel(dir) {
  * @param {string} folderPath - La ruta de la carpeta.
  * @return {string} - El nombre de la carpeta principal.
  */
-getCurrentFolderName(folderPath) {
-    ; Utilizar SplitPath para obtener el nombre de la carpeta actual
-    SplitPath(RTrim(folderPath, "\"), , &OutDir, , &OutDirName)
-
-    ; Devolver el nombre de la carpeta actual
-    return OutDirName
-}
+getCurrentFolderName(folderPath) => folderPath.RTrim("\").SplitPath().NameNoExt
 
 /**
  * * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
@@ -315,7 +269,7 @@ getCurrentFolderName(folderPath) {
  */
 normalizePath(path, mainPath?) {
     ;; Guardar el directorio de trabajo actual si se proporciona mainPath
-    if (IsSet(mainPath)) {
+    if IsSet(mainPath) {
         originalDir := A_WorkingDir
         SetWorkingDir(mainPath)
     }
@@ -327,11 +281,10 @@ normalizePath(path, mainPath?) {
     cleanPath := StrGet(buf) ;; Convertir el buffer a cadena
 
     ;; Restaurar el directorio de trabajo original si se proporcionó mainPath
-    if (IsSet(mainPath))
+    if IsSet(mainPath)
         SetWorkingDir(originalDir)
     ;; Eliminar barra invertida final si existe
-    if (SubStr(cleanPath, -1, 1) = "\")
-        cleanPath := SubStr(cleanPath, 1, -1)
+    cleanPath := cleanPath.Trim("\")
     ;; Verificar si la ruta existe
     if !FileExist(cleanPath)
         return false
@@ -343,16 +296,7 @@ normalizePath(path, mainPath?) {
  * @param {string} filePath - La ruta del archivo.
  * @returns {string} La extensión del archivo, sin incluir el punto. Si no tiene extensión, retorna una cadena vacía.
  */
-getFileExtension(filePath) {
-    ; Definir una variable para almacenar la extensión del archivo
-    OutExtension := ""
-
-    ; Utilizar SplitPath para obtener la extensión del archivo
-    SplitPath(filePath, , , &OutExtension)
-
-    ; Devolver la extensión (si existe) o una cadena vacía
-    return StrLower(OutExtension)
-}
+getFileExtension(filePath) => filePath.SplitPath().Ext.ToLower()
 
 /**
  * * Genera un nombre temporal utilizando un prefijo y el identificador único de la instancia del programa mas su extension `.tmp`.
@@ -462,8 +406,8 @@ analyzeConfigFile(pathConfigFile, section, arrayName) {
         showTopMsgBox("El archivo de configuración no existe. Asegúrese de que '" pathConfigFile "' está en el directorio correcto y contiene las entradas válidas.", "Archivo de Configuración No Encontrado", "Error", true)
         return []
     }
+    data := []
 
-    data := Array()
     currentSection := ""  ;; Inicializa la sección actual
     inTargetSection := false  ;; Bandera para indicar si estamos en la sección objetivo
     inArray := false  ;; Bandera para indicar si estamos dentro del array
@@ -493,8 +437,7 @@ analyzeConfigFile(pathConfigFile, section, arrayName) {
             }
         }
     }
-
-    return removeDuplicates(data)  ; Elimina elementos duplicados de la lista y la devuelve
+    return data.Unique()  ; Elimina elementos duplicados de la lista y la devuelve
 }
 
 parseArrayContent(lineContent, data) {
@@ -594,7 +537,7 @@ init() {
         ExitApp(1)
     }
 
-    ; Inicializar la GUI
+    ;; Inicializar la GUI
     createGui()
 }
 
@@ -612,7 +555,7 @@ processFolder(folderPath) {
         return
     }
 
-    ; Normalizar la ruta
+    ;; Normalizar la ruta
     folderPath := normalizePath(folderPath)
 
     if (!folderPath = false) {
@@ -626,23 +569,23 @@ processFolder(folderPath) {
     }
 
     isGenerating := true
-    myGui["GenerateText"].Value := "Generating..."  ; Cambia el texto a "Generating..."
+    myGui["GenerateText"].Value := "Generating..."  ;; Cambia el texto a "Generating..."
 
     mainFolderPath := folderPath
 
-    ; Generar el árbol de directorios
+    ;; Generar el árbol de directorios
     if (checkAndGenerateDirectoryTree()) {
         endGeneration()
         return
     }
 
-    ; Generar el contenido de los archivos
+    ;; Generar el contenido de los archivos
     if (checkAndGenerateFilesContents()) {
         endGeneration()
         return
     }
 
-    ; Combinar archivos y finalizar
+    ;; Combinar archivos y finalizar
     mergeFiles()
     endGeneration()
 }
@@ -654,7 +597,7 @@ endGeneration() {
     global isGenerating, myGui
     clearTemp()
     isGenerating := false
-    myGui["GenerateText"].Value := "Generate:"  ; Cambia el texto de vuelta a "Generate:"
+    myGui["GenerateText"].Value := "Generate:"  ;; Cambia el texto de vuelta a "Generate:"
 }
 
 
@@ -670,12 +613,7 @@ endGeneration() {
 ;^----------------Use analyzeConfigFile----------------
 
 getAnalyzeConfigFile(section, arrayName) {
-    return removeDuplicates(
-        combineArrays(
-            analyzeConfigFile(confiFileTreeGen, "AllDefault", arrayName),
-            analyzeConfigFile(confiFileTreeGen, section, arrayName)
-        )
-    )
+    return analyzeConfigFile(confiFileTreeGen, "AllDefault", arrayName).Extend(analyzeConfigFile(confiFileTreeGen, section, arrayName)).Unique()
 }
 
 getAllowedExtensions(section, arrayName) {
@@ -692,7 +630,7 @@ getAllowedExtensions(section, arrayName) {
 getIgnoredFiles(section, arrayName) {
     ignoredFiles := getAnalyzeConfigFile(section, arrayName)
 
-    newIgnoredFiles := Array()
+    newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
         cleanItem := normalizePath(item, mainFolderPath)
@@ -706,7 +644,7 @@ getIgnoredFiles(section, arrayName) {
     ignoredFiles := newIgnoredFiles
 
     ;; Se vuelven a eliminar los duplicados porque ahora se comprarn con la ruta absoluta para evitar rutas relativas repetidas.
-    ignoredFiles := removeDuplicates(ignoredFiles)
+    ignoredFiles.Unique()
 
     ; for index, item in ignoredFiles {
     ;     showTopMsgBox("ignoredFiles[" index "]", item)
@@ -723,11 +661,8 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
     ;; Crear una copia temporal del directorio principal con solo los archivos permitidos
     DirCreate(tempFolderPath)
 
-    ignoreDirs := Array()
-    for item in ignoredFiles {
-        if (DirExist(item))  ;; Si es un directorio
-            ignoreDirs.Push(item)
-    }
+    ignoreDirs := ignoredFiles
+    ignoreDirs.Filter(DirExist) ;; Filtramos por directorios que existan
 
     Loop Files, mainFolderPath "\*.*", "R" {
         relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
@@ -743,7 +678,7 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
         }
 
         ;; Verificar si la extensión está en la lista de archivos permitidos y no está en la lista de archivos completos ignorados
-        if !ignoreFile && arrayHasValue(allowedExtensions, fileExt) && !arrayHasValue(ignoredFiles, A_LoopFileFullPath) {
+        if !ignoreFile && allowedExtensions.HasValue(fileExt) && !ignoredFiles.HasValue(A_LoopFileFullPath) {
             destPath := tempFolderPath "\" relativePath
 
             ; showTopMsgBox("destPath", destPath)
@@ -771,12 +706,12 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
  * 
  * Solución: 
  * 1. Verifique que PowerShell está instalado y habilitado en su sistema.
+ * 
  * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
  */
 generateDirectoryTree() {
     global mainFolderPath, tempMainDir, tempFiles
     temp := tempFiles.file_dirTree
-
     tempFolderPath := tempFiles.dir_filesTree
 
     ;; Obtenemos la información de los archivos requerida
@@ -846,7 +781,7 @@ generateFilesContents() {
     ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
 
 
-    fileArray := Array()
+    fileArray := []
 
     createDir_filesTree(allowedExtensions, ignoredFiles)
 
