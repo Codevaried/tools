@@ -123,6 +123,7 @@ allowed_extensions = [
 ignored_files = [
 ###* Carpeta `node_modules`
 "node_modules",
+".git",
 
 #! En Desarrollo (Patrones Incompatibles)
 #;⛔
