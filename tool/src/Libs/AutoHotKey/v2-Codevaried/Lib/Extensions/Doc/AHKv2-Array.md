@@ -104,8 +104,8 @@ El código anterior mostrará 3 MsgBox:
 
 ```MsgBox
 ---------------------------
-Array: ( 3 ), ( 2 ), ( 1 )
-Value: ( 3 ), Index: 1
+Array: 3, 2, 1
+Value: 3, Index: 1
 ---------------------------
 ```
 
@@ -113,8 +113,8 @@ Value: ( 3 ), Index: 1
 
 ```MsgBox
 ---------------------------
-Array: ( 3 ), ( 2 ), ( 1 )
-Value: ( 2 ), Index: 2
+Array: 3, 2, 1
+Value: 2, Index: 2
 ---------------------------
 ```
 
@@ -122,8 +122,8 @@ Value: ( 2 ), Index: 2
 
 ```MsgBox
 ---------------------------
-Array: ( 3 ), ( 2 ), ( 1 )
-Value: ( 1 ), Index: 3
+Array: 3, 2, 1
+Value: 1, Index: 3
 ---------------------------
 ```
 
