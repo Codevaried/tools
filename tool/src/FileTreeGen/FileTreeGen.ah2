@@ -35,7 +35,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.1",
+    version: "v2.2",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -70,9 +70,9 @@ global tempMainDir := A_Temp "\" generateTempName("FileTreeGen")
  */
 global tempFiles := {
     dir_filesTree: tempMainDir "\FilesTree",
-    file_dirTree: tempMainDir "\tree_output.tmp",                ; Archivo temporal para el árbol de directorios
-    file_filesContents: tempMainDir "\filesContents_output.tmp", ; Archivo temporal para los contenidos de archivos
-    output: "output.md"                                          ; Archivo de salida combinado
+    file_dirTree: tempMainDir "\tree_output.tmp",                ;; Archivo temporal para el árbol de directorios
+    file_filesContents: tempMainDir "\filesContents_output.tmp", ;; Archivo temporal para los contenidos de archivos
+    output: "output.md"                                          ;; Archivo de salida combinado
 }
 
 /**
@@ -96,13 +96,16 @@ SetKeyDelay -1, -1
 ;! Uso solo para modo desarollo
 #HotIf !A_IsCompiled
 ^s:: {
-    Send("^s")  ; Simula Ctrl+S para guardar el archivo
-    clearTemp() ; Elimina todos los posibles archivos residuales.
-    Sleep(100)  ; Pequeño retraso para asegurar que el archivo se guarde
-    Reload()  ; Recarga el script
+    Send("^s")  ;; Simula Ctrl+S para guardar el archivo
+    clearTemp() ;; Elimina todos los posibles archivos residuales.
+    Sleep(100)  ;; Pequeño retraso para asegurar que el archivo se guarde
+    Reload()    ;; Recarga el script
 }
 
-^Esc:: ExitApp(1)
+^Esc:: {
+    clearTemp()
+    ExitApp(1)
+}
 #HotIf
 
 
@@ -116,33 +119,33 @@ createGui() {
     myGui := Gui("+AlwaysOnTop", PROGRAM.fullDescription)
     myGui.SetFont("s10", "Segoe UI")
 
-    ; Añadir controles a la GUI
+    ;; Añadir controles a la GUI
     myGui.Add("Text", , "Arrastre una carpeta o selecciónela manualmente:")
     folderEdit := myGui.Add("Edit", "w400 vFolderPath")
     folderButton := myGui.Add("Button", "xp+263 y+5", "Seleccionar Carpeta")
 
-    ; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
+    ;; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
     generateText := myGui.Add("Text", "xm yp+10 w100 h23 vGenerateText", "Generate:").SetFont("s12", "Segoe UI")
 
-    ; Añadir CheckBoxes en línea y activarlos por defecto
+    ;; Añadir CheckBoxes en línea y activarlos por defecto
     directoryTreeCheckbox := myGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
     fileContentsCheckbox := myGui.Add("CheckBox", "x+10 Checked", "Files Contents")
 
-    ; Configurar eventos de botones y checkboxes
+    ;; Configurar eventos de botones y checkboxes
     folderButton.OnEvent("Click", selectFolder)
     directoryTreeCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(directoryTreeCheckbox))
     fileContentsCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(fileContentsCheckbox))
 
-    ; Configurar evento de arrastre
+    ;; Configurar evento de arrastre
     myGui.OnEvent("DropFiles", guiDropFiles)
 
-    ; Configurar la captura de la tecla Enter
+    ;; Configurar la captura de la tecla Enter
     OnMessage(0x0100, WM_KeyDown)
 
-    ; Configurar el evento de cierre de la GUI para finalizar el programa
+    ;; Configurar el evento de cierre de la GUI para finalizar el programa
     myGui.OnEvent("Close", closeProgram)
 
-    ; Mostrar la GUI centrada
+    ;; Mostrar la GUI centrada
     myGui.Show("AutoSize Center")
 }
 
@@ -151,14 +154,13 @@ createGui() {
  */
 closeProgram(*) {
     clearTemp()
-    ExitApp
+    ExitApp(0)
 }
 
 /**
  * * Asegura que al menos uno de los checkboxes esté activado.
  */
 ensureOneCheckboxChecked(checkbox) {
-    global directoryTreeCheckbox, fileContentsCheckbox
     if (!directoryTreeCheckbox.Value && !fileContentsCheckbox.Value) {
         checkbox.Value := true
     }
@@ -170,15 +172,14 @@ ensureOneCheckboxChecked(checkbox) {
 selectFolder(*) {
     if (checkIfGenerating())
         return
-
-    ; Configurar el temporizador para asegurarse de que el diálogo se mantenga siempre en la parte superior
+    ;; Configurar el temporizador para asegurarse de que el diálogo se mantenga siempre en la parte superior
     ; SetTimer MakeTopmost, 50
     SetTimer MakeTopmost, -100
 
-    ; Crear el diálogo de selección de carpeta
+    ;; Crear el diálogo de selección de carpeta
     folderPath := FileSelect("D", "", "Seleccione una carpeta")
 
-    ; Desactivar el temporizador después de cerrar el diálogo
+    ;; Desactivar el temporizador después de cerrar el diálogo
     SetTimer MakeTopmost, 0
 
     processFolder(folderPath)
@@ -214,10 +215,9 @@ guiDropFiles(thisGui, ctrl, fileArray, *) {
  * @param {HWND} hwnd - El identificador de la ventana.
  */
 WM_KeyDown(wParam, lParam, msg, hwnd) {
-    global PROGRAM, folderEdit
     if (checkIfGenerating())
         return
-    if (wParam = 0x0D) { ; Código de la tecla Enter
+    if (wParam == 0x0D) { ; Código de la tecla Enter
         if (WinActive(PROGRAM.fullDescription)) {
             processFolder(folderEdit.Value)
         }
@@ -312,6 +312,55 @@ generateTempFileName(prefix) => prefix "-" A_ScriptHwnd ".tmp"
  */
 generateTempName(prefix) => prefix "-" A_ScriptHwnd
 
+/**
+ * * Obtiene el tamaño total de un directorio y opcionalmente verifica si no supera un tamaño máximo especificado.
+ * @param {String} dirPath - La ruta del directorio.
+ * @param {Int64} [maxSize] - (Opcional) El tamaño máximo permitido en bytes.
+ * @param {Array} [ignoreFiles] - (Opcional) Array de archivos y directorios a ignorar.
+ * @param {Array} [allowedExtensions] - (Opcional) Array de extensiones permitidas.
+ * @returns {Int64|Int} - Devuelve el tamaño total del directorio si no se proporciona maxSize o si no supera el maxSize, de lo contrario, devuelve -1.
+ */
+getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) {
+    totalSize := 0
+
+    ;; Filtrar los directorios de la lista de ignorados
+    ignoreDirs := ignoreFiles
+    ignoreDirs.Filter(DirExist)
+
+    ;; Iterar sobre todos los archivos y subdirectorios
+    Loop Files, dirPath "\*", "FR" {
+        ;; Obtener la ruta completa del archivo actual
+        filePath := A_LoopFileFullPath
+        fileExtension := A_LoopFileExt
+
+        ;; Verificar si el archivo actual está en la lista de archivos a ignorar
+        if (ignoreFiles.Length > 0 && ignoreFiles.HasValue(filePath)) {
+            continue
+        }
+
+        ;; Verificar si el archivo actual está dentro de algún directorio a ignorar
+        for dir in ignoreDirs {
+            if (filePath.Find(dir "\")) {
+                continue
+            }
+        }
+
+        ;; Verificar si la extensión del archivo está permitida, si se proporciona allowedExtensions
+        if (allowedExtensions.Length > 0 && !allowedExtensions.HasValue(fileExtension)) {
+            continue
+        }
+
+        totalSize += A_LoopFileSize
+
+        ;; Verificar si el tamaño supera el máximo permitido, si se proporciona maxSize
+        if (IsSet(maxSize) && totalSize > maxSize) {
+            return -1
+        }
+    }
+
+    return totalSize
+}
+
 
 ;;MARK:*
 ;^----------------Other----------------^;
@@ -324,48 +373,48 @@ generateTempName(prefix) => prefix "-" A_ScriptHwnd
  * @param {boolean} async - Si es verdadero, muestra el MsgBox asincrónicamente.
  */
 showTopMsgBox(message := "", title := "", type := "Default", async := false) {
-    ; Convertir el tipo de mensaje a minúsculas para que el switch no distinga entre mayúsculas y minúsculas
+    ;; Convertir el tipo de mensaje a minúsculas para que el switch no distinga entre mayúsculas y minúsculas
     type := StrLower(type)
 
-    ; Determinar el ícono basado en el tipo de mensaje
+    ;; Determinar el ícono basado en el tipo de mensaje
     switch type {
         case "error":
-            icon := 0x10 ; Ícono de error
+            icon := 0x10 ;; Ícono de error
         case "warning":
-            icon := 0x30 ; Ícono de advertencia
+            icon := 0x30 ;; Ícono de advertencia
         case "info":
-            icon := 0x40 ; Ícono de información
+            icon := 0x40 ;; Ícono de información
         case "question":
-            icon := 0x20 ; Ícono de pregunta
+            icon := 0x20 ;; Ícono de pregunta
         default:
-            ; Capturar el número de línea utilizando una excepción
+            ;; Capturar el número de línea utilizando una excepción
             try {
-                ; Forzar una excepción para capturar el contexto de la llamada
+                ;; Forzar una excepción para capturar el contexto de la llamada
                 throw ValueError("Capturing line number", -1)
             } catch ValueError as err {
                 callerLine := err.Line
             }
-            icon := 0 ; Sin ícono por defecto
+            icon := 0 ;; Sin ícono por defecto
 
-            ; Formatear el mensaje según las combinaciones de message y title
-            if (message = "" and title = "") {
+            ;; Formatear el mensaje según las combinaciones de message y title
+            if (message == "" and title = "") {
                 message := ""
-            } else if (message != "" and title != "") {
+            } else if (message !== "" and title !== "") {
                 message := message ':`n"' title '"'
-            } else if (message = "" and title != "") {
+            } else if (message == "" and title !== "") {
                 message := '"' title '"'
-            } else if (title != "" and message = "") {
+            } else if (title !== "" and message == "") {
                 message := title
             }
 
             title := "Line: " callerLine
     }
 
-    ; Si es asincrónico, usar SetTimer para mostrar el MsgBox
+    ;; Si es asincrónico, usar SetTimer para mostrar el MsgBox
     if async {
         SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1)
     } else {
-        ; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
+        ;; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
         MsgBox(message, title, icon | 0x40000)
     }
 }
@@ -388,7 +437,7 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
  * @return {string|false} - La ruta validada si es válida, de lo contrario, false.
  */
 isValidFolder(path) {
-    if (!FileExist(path) or FileExist(path) != "D" and FileExist(path) != "AD" and FileExist(path) != "RD") {
+    if (!FileExist(path) or FileExist(path) !== "D" and FileExist(path) !== "AD" and FileExist(path) !== "RD") {
         return false
     }
     return true
@@ -415,9 +464,9 @@ analyzeConfigFile(pathConfigFile, section, arrayName) {
     Loop Read, pathConfigFile {
         line := Trim(A_LoopReadLine)
         ;; Ignora líneas vacías o comentarios
-        if (line != "" && SubStr(line, 1, 1) != "#") {
+        if (line !== "" && SubStr(line, 1, 1) !== "#") {
             ;; Detecta el inicio de una nueva sección
-            if (Trim(SubStr(line, 1, 1) = "[" && SubStr(line, -1, 1) = "]")) {
+            if (Trim(SubStr(line, 1, 1) = "[" && SubStr(line, -1, 1) == "]")) {
                 currentSection := SubStr(line, 2, -1)  ;; Extrae el nombre de la sección
                 inTargetSection := (currentSection = section)  ;; Comprueba si es la sección objetivo
                 continue
@@ -437,7 +486,7 @@ analyzeConfigFile(pathConfigFile, section, arrayName) {
             }
         }
     }
-    return data.Unique()  ; Elimina elementos duplicados de la lista y la devuelve
+    return data.Unique()  ;; Elimina elementos duplicados de la lista y la devuelve
 }
 
 parseArrayContent(lineContent, data) {
@@ -452,7 +501,7 @@ parseArrayContent(lineContent, data) {
         ; showTopMsgBox("lineContent[" index "]", item)
 
         ;; Si se encuentra un ']' sin comillas, finalizar la lectura del array
-        if (SubStr(item, -1, 1) = "]") {
+        if (SubStr(item, -1, 1) == "]") {
 
             item := Trim(StrReplace(StrReplace(SubStr(item, 1, StrLen(item) - 1), '"'), "'"))
             ; showTopMsgBox("lineContent[" index "]", item)
@@ -467,7 +516,7 @@ parseArrayContent(lineContent, data) {
             ; showTopMsgBox("lineContent[" index "]", item)
         }
 
-        if (item != "") {
+        if (item !== "") {
             ; showTopMsgBox("lineContent[" index "]", item)
             data.Push(item)  ;; Agrega el elemento a la lista de datos
             if (isEnd)
@@ -494,7 +543,6 @@ parseArrayContent(lineContent, data) {
  * @return {boolean} - Verdadero si el proceso está en curso, falso en caso contrario.
  */
 checkIfGenerating() {
-    global isGenerating
     if (isGenerating) {
         showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
         return true
@@ -505,7 +553,6 @@ checkIfGenerating() {
  * * Verifica si el checkbox de Directory Tree está activado y llama a generateDirectoryTree si es así.
  */
 checkAndGenerateDirectoryTree() {
-    global directoryTreeCheckbox
     if (directoryTreeCheckbox.Value) {
         return generateDirectoryTree()
     }
@@ -515,7 +562,6 @@ checkAndGenerateDirectoryTree() {
  * * Verifica si el checkbox de Files Contents está activado y llama a generateFilesContents si es así.
  */
 checkAndGenerateFilesContents() {
-    global fileContentsCheckbox
     if (fileContentsCheckbox.Value) {
         return generateFilesContents()
     }
@@ -528,7 +574,6 @@ checkAndGenerateFilesContents() {
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
  */
 init() {
-    global confiFileTreeGen
     fileConfi := confiFileTreeGen
 
     if (!FileExist(fileConfi)) {
@@ -548,7 +593,7 @@ init() {
 processFolder(folderPath) {
     global mainFolderPath, isGenerating, myGui, folderEdit
 
-    if (folderPath = "")
+    if (folderPath == "")
         return
 
     if (checkIfGenerating()) {
@@ -558,7 +603,7 @@ processFolder(folderPath) {
     ;; Normalizar la ruta
     folderPath := normalizePath(folderPath)
 
-    if (!folderPath = false) {
+    if (!folderPath == false) {
         folderEdit.Value := folderPath
     }
 
@@ -572,6 +617,17 @@ processFolder(folderPath) {
     myGui["GenerateText"].Value := "Generating..."  ;; Cambia el texto a "Generating..."
 
     mainFolderPath := folderPath
+
+
+    allowedExtensions := getAllowedExtensions("AllDefault", false)
+    ignoreFiles := getIgnoredFiles("AllDefault", false)
+
+    ;; Se comprueba que folderPath no supere los 50 Megabytes
+    if (getDirectorySize(folderPath, 50000000, ignoreFiles, allowedExtensions) == -1) {
+        showTopMsgBox("Los archivos para procesar superan los 50 MB y no se procederá. Para solucionar esto, seleccione un directorio más pequeño o edite en el archivo de configuración los archivos que se procesarán.", "Tamaño del Directorio Excedido", "Error", true)
+        endGeneration()
+        return
+    }
 
     ;; Generar el árbol de directorios
     if (checkAndGenerateDirectoryTree()) {
@@ -612,23 +668,23 @@ endGeneration() {
 ;;MARK:*
 ;^----------------Use analyzeConfigFile----------------
 
-getAnalyzeConfigFile(section, arrayName) {
-    return analyzeConfigFile(confiFileTreeGen, "AllDefault", arrayName).Extend(analyzeConfigFile(confiFileTreeGen, section, arrayName)).Unique()
+getAnalyzeConfigFile(section, arrayName, extendAllDefault := true) {
+    if extendAllDefault
+        return analyzeConfigFile(confiFileTreeGen, "AllDefault", arrayName).Extend(analyzeConfigFile(confiFileTreeGen, section, arrayName)).Unique()
+    return analyzeConfigFile(confiFileTreeGen, section, arrayName).Unique()
 }
 
-getAllowedExtensions(section, arrayName) {
-    global confiFileTreeGen
-
-    allowedExtensions := getAnalyzeConfigFile(section, arrayName)
-    if (allowedExtensions.Length = 0) {
+getAllowedExtensions(section, extendAllDefault?) {
+    allowedExtensions := getAnalyzeConfigFile(section, "allowed_extensions", extendAllDefault?)
+    if (allowedExtensions.Length == 0) {
         showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" confiFileTreeGen "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
         return 1
     }
     return allowedExtensions
 }
 
-getIgnoredFiles(section, arrayName) {
-    ignoredFiles := getAnalyzeConfigFile(section, arrayName)
+getIgnoredFiles(section, extendAllDefault?) {
+    ignoredFiles := getAnalyzeConfigFile(section, "ignored_files", extendAllDefault?)
 
     newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
@@ -654,8 +710,6 @@ getIgnoredFiles(section, arrayName) {
 }
 
 createDir_filesTree(allowedExtensions, ignoredFiles) {
-    global mainFolderPath, tempFiles
-
     tempFolderPath := tempFiles.dir_filesTree
 
     ;; Crear una copia temporal del directorio principal con solo los archivos permitidos
@@ -666,12 +720,12 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
 
     Loop Files, mainFolderPath "\*.*", "R" {
         relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
-        fileExt := getFileExtension(A_LoopFileFullPath)
+        fileExt := A_LoopFileExt
 
         ;; Verificar si el archivo o su carpeta está en la lista de ignorados
         ignoreFile := false
         for dir in ignoreDirs {
-            if (InStr(A_LoopFileFullPath, dir "\") = 1) {
+            if (InStr(A_LoopFileFullPath, dir "\") == 1) {
                 ignoreFile := true
                 break
             }
@@ -710,13 +764,12 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
  * 2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.
  */
 generateDirectoryTree() {
-    global mainFolderPath, tempMainDir, tempFiles
     temp := tempFiles.file_dirTree
     tempFolderPath := tempFiles.dir_filesTree
 
     ;; Obtenemos la información de los archivos requerida
     allowedExtensions := getAllowedExtensions("DirectoryTree", "allowed_extensions")
-    if (allowedExtensions = 1)
+    if (allowedExtensions == 1)
         return 1 ;; Error no hay extensiones permitidas
     ignoredFiles := getIgnoredFiles("DirectoryTree", "ignored_files")
 
@@ -750,7 +803,7 @@ generateDirectoryTree() {
     ;; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones
     fileTreeNew := "``````tree`n"
     for line in fileTreeArray {
-        if (Trim(line) != "") {
+        if (Trim(line) !== "") {
             fileTreeNew .= line "`n"
         }
     }
@@ -769,14 +822,12 @@ generateDirectoryTree() {
  * * Genera el contenido de los archivos de la carpeta seleccionada.
  */
 generateFilesContents() {
-    global mainFolderPath, tempFiles
-
     temp := tempFiles.file_filesContents
     tempFolderPath := tempFiles.dir_filesTree
 
     ;; Obtenemos la informacion de los archivos requerida
     allowedExtensions := getAllowedExtensions("FilesContents", "allowed_extensions")
-    if (allowedExtensions = 1)
+    if (allowedExtensions == 1)
         return 1 ;; Error no hay extensiones permitidas
     ignoredFiles := getIgnoredFiles("FilesContents", "ignored_files")
 
@@ -793,7 +844,7 @@ generateFilesContents() {
     }
 
 
-    if (fileArray.Length = 0) {
+    if (fileArray.Length == 0) {
         fileList := "**[Aviso: No Hay Archivos que Coincidan con la Configuracion Actual]**"
     } else {
         for index, relativePath in fileArray {
@@ -830,7 +881,6 @@ generateFilesContents() {
  * * Elimina archivos temporales utilizados durante el procesamiento.
  */
 clearTemp() {
-    global tempMainDir
     dirDel(tempMainDir)
 }
 
@@ -839,8 +889,6 @@ clearTemp() {
  * Elimina los archivos intermedios y copia el contenido final al portapapeles.
  */
 mergeFiles() {
-    global directoryTreeCheckbox, fileContentsCheckbox, tempFiles
-
     outputContent := "## Índice (File Tree Generation)`n"
     output := tempFiles.output
     spacer := "`n`n"
