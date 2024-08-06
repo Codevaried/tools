@@ -1,9 +1,8 @@
-## Índice de la Documentación de FileTreeGen v2.2
+## Índice de la Documentación de FileTreeGen v2.3
 
 - [Introducción](#introducción)
 - [Funcionalidades Principales](#funcionalidades-principales)
 - [Requisitos](#requisitos)
-- [Árbol de directorios](#Directory-Tree)
 - [Configuración FileTreeGen](#Configuración-FileTreeGen)
 - [Resumen del Código](#resumen-del-código)
 - [Ejecución del Programa](#ejecución-del-programa)
@@ -14,7 +13,7 @@
 
 ### Introducción
 
-**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.2**.
+**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.3**.
 
 ### Funcionalidades Principales
 
@@ -30,48 +29,7 @@
 - Archivo **FileTreeGen.conf** que contiene las extensiones permitidas y archivos ignorados.
 - Carpeta de destino con los archivos a procesar.
 
-### Directory Tree
-
-El árbol de directorios del proyecto es el siguiente:
-
-```tree
-FileTreeGen
-│   FileTreeGen.ah2
-│   FileTreeGen.conf
-│   output.md
-│   README.md
-│
-├───bin
-│       FileTreeGen.conf
-│       output.md
-│
-└───tree_tests
-    │   1.txt
-    │
-    ├───1
-    │   │   2.txt
-    │   │
-    │   ├───a
-    │   │       a.txt
-    │   │
-    │   ├───b
-    │   │       b.md
-    │   │
-    │   └───d
-    │           d.js
-    │
-    └───node_modules
-        │   2.txt
-        │
-        ├───a
-        │       a.txt
-        │
-        └───b
-                b.js
-
-```
-
-#### Configuración FileTreeGen
+### Configuración FileTreeGen
 
 Este archivo **FileTreeGen.conf** contiene la configuración de las extensiones de archivos permitidas y los archivos que deben ser ignorados durante el procesamiento.
 
@@ -83,11 +41,11 @@ Este archivo **FileTreeGen.conf** contiene la configuración de las extensiones 
 #; Cada línea dentro de los arrays debe contener una extensión sin el punto inicial.
 #; Se ignoran las líneas que comienzan con "#".
 
-##? ♦ Carpetas y Archivos Ignorados (NO Usar Patrones De Coincidencia)
-#; Define los archivos completos que deben ser ignorados durante el procesamiento.
-#; Cada línea dentro de los arrays debe contener la ruta completa del archivo junto con su extensión.
+##? ♦ Carpetas y Archivos Ignorados
+#; Define los archivos y carpetas que deben ser ignorados durante el procesamiento.
+#; Cada línea dentro de los arrays debe contener la ruta completa del archivo junto con su extensión, o usar patrones de coincidencia.
 #; Se pueden usar rutas absolutas y relativas.
-#; No se pueden usar patrones de búsqueda o de coincidencia de archivos como `?` o `*`.
+#; Se pueden usar patrones de búsqueda o de coincidencia de archivos como `?` o `*`.
 #; Se ignoran las líneas que comienzan con "#".
 
 #? ♦ Sintaxis de los Arrays
@@ -124,11 +82,6 @@ ignored_files = [
 ###* Carpeta `node_modules`
 "node_modules",
 ".git",
-
-#! En Desarrollo (Patrones Incompatibles)
-#;⛔
-# "node_modules\??.*",
-# "node_modules\*.js",
 ]
 
 ############################################################
@@ -160,8 +113,8 @@ allowed_extensions = [
 
 ##? Carpetas y Archivos Ignorados
 ignored_files = [
-###* Archivo de Salida Combinado
-"output.md",
+#* Ejemplo ignorar todos los archivos MarkDown (Recursivo)
+"*.md",
 ]
 
 ############################################################
@@ -198,47 +151,31 @@ Para ejecutar el programa, tiene dos opciones:
 
 Ejemplos de archivos de prueba ubicados en la carpeta `tree_tests`:
 
-`````markdown
-#### Archivo `1.txt`:
-
-```txt
+``````````````markdown
+#### Archivo `1.txt`: 
+`````````````txt 
 File in the main path
-```
+`````````````
 
-#### Archivo `1\2.txt`:
-
-```txt
+#### Archivo `1\2.txt`: 
+`````````````txt 
 File in the secondary path
-```
+`````````````
 
-#### Archivo `1\a\a.txt`:
-
-```txt
+#### Archivo `1\a\a.txt`: 
+`````````````txt 
 Line 1
 Line 2
 Text Text
-```
+`````````````
 
-#### Archivo `1\b\b.md`:
-
-````md
-##### Line 1
-
-##### Line 2
-
-```
-MarkDown code
-```
-````
-
-#### Archivo `1\d\d.js`:
-
-```js
+#### Archivo `1\d\d.js`: 
+`````````````js 
 console.log("Line 1");
 console.log("Line 2");
 // JavaScript comment
-```
-`````
+`````````````
+``````````````
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.
 
@@ -258,7 +195,7 @@ Estos archivos de ejemplo permiten probar la funcionalidad del programa y verifi
 > Las rutas relativas deberían funcionar correctamente. Asegúrese de proporcionar rutas relativas precisas para evitar errores en la generación de contenidos y estructuras de archivos.
 
 > [!CAUTION]
-> Los patrones de archivos como el uso de `*` o `?` aún no están implementados y pueden causar errores si se utilizan. Se planea añadir esta funcionalidad en el futuro, pero por ahora, evite usarlos. Asegúrese de que el archivo **FileTreeGen.conf** esté bien configurado y que las líneas estén estructuradas según la sintaxis requerida.
+> Asegúrese de que el archivo **FileTreeGen.conf** esté bien configurado y que las líneas estén estructuradas según la sintaxis requerida.
 
 ### Conclusión
 

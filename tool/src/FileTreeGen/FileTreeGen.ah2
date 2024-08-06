@@ -35,7 +35,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.2",
+    version: "v2.3",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -262,10 +262,12 @@ dirDel(dir) {
 getCurrentFolderName(folderPath) => folderPath.RTrim("\").SplitPath().NameNoExt
 
 /**
- * * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
+ * Normaliza una ruta y verifica su existencia. Opcionalmente, establece un directorio de trabajo principal.
  * @param {String} path - La ruta a normalizar.
  * @param {String} [mainPath] - (Opcional) El directorio de trabajo principal para resolver la ruta.
- * @returns {String|Boolean} - Devuelve la ruta normalizada si existe, de lo contrario, devuelve false.
+ * @returns {Object} - Devuelve un objeto con la ruta normalizada y un indicador de existencia.
+ * @property {String} path - La ruta normalizada.
+ * @property {Boolean} exist - Indica si la ruta existe.
  */
 normalizePath(path, mainPath?) {
     ;; Guardar el directorio de trabajo actual si se proporciona mainPath
@@ -287,8 +289,8 @@ normalizePath(path, mainPath?) {
     cleanPath := cleanPath.Trim("\")
     ;; Verificar si la ruta existe
     if !FileExist(cleanPath)
-        return false
-    return cleanPath
+        return { path: cleanPath, exist: false }
+    return { path: cleanPath, exist: true }
 }
 
 /**
@@ -397,7 +399,7 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
             icon := 0 ;; Sin ícono por defecto
 
             ;; Formatear el mensaje según las combinaciones de message y title
-            if (message == "" and title = "") {
+            if (message == "" and title == "") {
                 message := ""
             } else if (message !== "" and title !== "") {
                 message := message ':`n"' title '"'
@@ -412,11 +414,42 @@ showTopMsgBox(message := "", title := "", type := "Default", async := false) {
 
     ;; Si es asincrónico, usar SetTimer para mostrar el MsgBox
     if async {
-        SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1)
+        SetTimer((() => MsgBox(message, title, icon | 0x40000)), -1, -1)
+        ; MsgBox async
     } else {
         ;; Mostrar el MsgBox con la opción Always On Top y el ícono seleccionado
         MsgBox(message, title, icon | 0x40000)
     }
+}
+
+/**
+ * * Ejecuta un comando en PowerShell y devuelve la salida.
+ * @param {String} command - El comando de PowerShell a ejecutar.
+ * @param {String} [tempFolderPath=A_Temp] - (Opcional) La ruta donde se creará el archivo temporal. Por defecto, se usa la carpeta temporal del sistema.
+ * @returns {Array} - Array con la salida del comando.
+ */
+RunPowerShellCommand(command, tempFolderPath := A_Temp) {
+    tempFile := tempFolderPath "\" generateTempFileName("outPSC")
+
+    fullCommand := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {" command " | Out-File -FilePath " tempFile " -Encoding utf8}"
+
+    ;; Ejecutar el comando en segundo plano
+    RunWait(fullCommand, , "Hide")
+    if (A_LastError !== 0) {
+        showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al ejecutar el comando de PowerShell", "Error", true)
+        return []
+    }
+
+    ;; Leer la salida del archivo temporal
+    output := []
+    content := FileRead(tempFile, "UTF-8")
+
+    for line in content.Split("`n") {
+        output.Push(line.Trim("`r"))
+    }
+
+    fileDel(tempFile)
+    return output
 }
 
 
@@ -489,6 +522,12 @@ analyzeConfigFile(pathConfigFile, section, arrayName) {
     return data.Unique()  ;; Elimina elementos duplicados de la lista y la devuelve
 }
 
+/**
+ * * Procesa el contenido de una línea para extraer los elementos del array.
+ * @param {string} lineContent - El contenido de la línea a procesar.
+ * @param {Array} data - El array donde se agregarán los elementos procesados.
+ * @return {boolean} - Indica si el final del array ha sido alcanzado.
+ */
 parseArrayContent(lineContent, data) {
     isEnd := false
 
@@ -502,10 +541,8 @@ parseArrayContent(lineContent, data) {
 
         ;; Si se encuentra un ']' sin comillas, finalizar la lectura del array
         if (SubStr(item, -1, 1) == "]") {
-
             item := Trim(StrReplace(StrReplace(SubStr(item, 1, StrLen(item) - 1), '"'), "'"))
             ; showTopMsgBox("lineContent[" index "]", item)
-
             isEnd := true
         }
 
@@ -603,11 +640,11 @@ processFolder(folderPath) {
     ;; Normalizar la ruta
     folderPath := normalizePath(folderPath)
 
-    if (!folderPath == false) {
-        folderEdit.Value := folderPath
+    if (!folderPath.exist == false) {
+        folderEdit.Value := folderPath.path
     }
 
-    if (!isValidFolder(folderPath)) {
+    if (!isValidFolder(folderPath.path)) {
         showTopMsgBox("Por favor, ingrese una ruta de carpeta válida.", "Ruta de Carpeta Inválida", "Error", true)
         endGeneration()
         return
@@ -616,15 +653,15 @@ processFolder(folderPath) {
     isGenerating := true
     myGui["GenerateText"].Value := "Generating..."  ;; Cambia el texto a "Generating..."
 
-    mainFolderPath := folderPath
+    mainFolderPath := folderPath.path
 
 
     allowedExtensions := getAllowedExtensions("AllDefault", false)
     ignoreFiles := getIgnoredFiles("AllDefault", false)
 
-    ;; Se comprueba que folderPath no supere los 50 Megabytes
-    if (getDirectorySize(folderPath, 50000000, ignoreFiles, allowedExtensions) == -1) {
-        showTopMsgBox("Los archivos para procesar superan los 50 MB y no se procederá. Para solucionar esto, seleccione un directorio más pequeño o edite en el archivo de configuración los archivos que se procesarán.", "Tamaño del Directorio Excedido", "Error", true)
+    ;; Se comprueba que folderPath.path no supere los 3.5 Megabytes
+    if (getDirectorySize(folderPath.path, 3500000, ignoreFiles, allowedExtensions) == -1) {
+        showTopMsgBox("Los archivos para procesar superan los 3.5 MB y no se procederá. Para solucionar esto, seleccione un directorio más pequeño o edite en el archivo de configuración los archivos que se procesarán.", "Tamaño del Directorio Excedido", "Error", true)
         endGeneration()
         return
     }
@@ -683,24 +720,51 @@ getAllowedExtensions(section, extendAllDefault?) {
     return allowedExtensions
 }
 
+/**
+ * Obtiene los archivos ignorados según la sección especificada y opcionalmente extiende todos los valores por defecto.
+ * Aplica patrones de coincidencia para los nombres de archivo.
+ * @param {String} section - La sección de configuración a analizar.
+ * @param {Boolean} [extendAllDefault] - (Opcional) Indica si se deben extender todos los valores por defecto.
+ * @returns {Array} - Devuelve un array de archivos ignorados.
+ */
 getIgnoredFiles(section, extendAllDefault?) {
     ignoredFiles := getAnalyzeConfigFile(section, "ignored_files", extendAllDefault?)
 
     newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
-        cleanItem := normalizePath(item, mainFolderPath)
-        ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem)
 
-        if (cleanItem) {
-            newIgnoredFiles.Push(cleanItem)
+        cleanItem := normalizePath(item, mainFolderPath)
+        ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem.path)
+
+        fileName := cleanItem.path.SplitPath().FileName
+
+        ; showTopMsgBox("fileName", fileName)
+        if fileName.Find("*") or fileName.Find("?") or fileName.Find("[") {
+            ; showTopMsgBox("Coincidencia '*' '?' '['", item.SplitPath().FileName)
+            psCommand := "Get-ChildItem -Path '" cleanItem.path "' -Filter '" fileName "' -Recurse | Select-Object -ExpandProperty FullName"
+
+            matchFiles := RunPowerShellCommand(psCommand)
+
+            ; showTopMsgBox(matchFiles.Join())
+
+            newIgnoredFiles.Extend(matchFiles)
+
+            ; showTopMsgBox(newIgnoredFiles.Join())
+
+            continue
+        }
+
+        if (cleanItem.exist) {
+            newIgnoredFiles.Push(cleanItem.path)
         }
     }
 
     ignoredFiles := newIgnoredFiles
 
-    ;; Se vuelven a eliminar los duplicados porque ahora se comprarn con la ruta absoluta para evitar rutas relativas repetidas.
+    ;; Se vuelven a eliminar los duplicados porque ahora se comparan con la ruta absoluta para evitar rutas relativas repetidas.
     ignoredFiles.Unique()
+    ; showTopMsgBox(ignoredFiles.Join())
 
     ; for index, item in ignoredFiles {
     ;     showTopMsgBox("ignoredFiles[" index "]", item)
@@ -776,33 +840,23 @@ generateDirectoryTree() {
     createDir_filesTree(allowedExtensions, ignoredFiles)
 
     ;; Usar PowerShell para generar el árbol de archivos con caracteres Unicode correctamente
-    command := "powershell -NoProfile -ExecutionPolicy Bypass -Command " "& {tree /f '" tempFolderPath "' | Out-File -FilePath " temp " -Encoding utf8}"
-
-    RunWait(command, , "Hide")
-    if (A_LastError) {
-        showTopMsgBox("Posibles causas: `n1. PowerShell no está instalado o habilitado en el sistema.`n2. Restricciones de políticas de ejecución de scripts en PowerShell.`n`nSolución: `n1. Verifique que PowerShell está instalado y habilitado en su sistema.`n2. Revise las políticas de ejecución de PowerShell y ajuste según sea necesario.", "Error al generar el árbol de archivos", "Error", true)
-        return 1
-    }
-
-    ;; Leer el archivo de salida y eliminar las dos primeras líneas
-    fileTree := FileRead(temp, "UTF-8")
+    fileTree := RunPowerShellCommand("tree /f '" tempFolderPath "'")
 
     ;; Una vez leido el archivo eliminamos el arbol de archivos
     dirDel(tempFolderPath)
 
-    fileTreeArray := StrSplit(fileTree, "`n")
     ;; Eliminar las dos primeras líneas
-    fileTreeArray.RemoveAt(1)
-    fileTreeArray.RemoveAt(1)
+    fileTree.RemoveAt(1)
+    fileTree.RemoveAt(1)
 
     ;; Obtener el nombre de la carpeta principal
     folderName := getCurrentFolderName(mainFolderPath)
     ;; Reemplazar la primera línea con el nombre de la carpeta principal
-    fileTreeArray[1] := folderName
+    fileTree[1] := folderName
 
     ;; Filtrar líneas vacías, eliminar espacios en blanco y tabulaciones
     fileTreeNew := "``````tree`n"
-    for line in fileTreeArray {
+    for line in fileTree {
         if (Trim(line) !== "") {
             fileTreeNew .= line "`n"
         }
@@ -861,7 +915,7 @@ generateFilesContents() {
             if (errorFileContents)
                 fileList .= "#### Archivo ``" relativePath "`` **[Error: Lectura del archivo]**"
             else
-                fileList .= "#### Archivo ``" relativePath "``: `n````````" fileExtension " `n" fileContents "`n````````"
+                fileList .= "#### Archivo ``" relativePath "``: `n``````````````````````````" fileExtension " `n" fileContents "`n``````````````````````````"
 
             if (index < fileArray.Length) {
                 fileList .= "`n`n"

@@ -4,8 +4,6 @@
 #* Ignorar Archivos innecesarios (FileTreeGen)
 /tool/src/FileTreeGen/bin/FileTreeGen.conf
 /tool/src/FileTreeGen/bin/output.md
-/tool/src/FileTreeGen/bin/*.tmp
-/tool/src/FileTreeGen/*.tmp
 
 #* Ignorar Carpetas y Archivos Privados en desarrollo
 _*
