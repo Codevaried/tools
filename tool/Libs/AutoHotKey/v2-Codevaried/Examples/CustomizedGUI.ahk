@@ -10,10 +10,20 @@ SetKeyDelay -1
 
 ;? MAIN HOTKEY:
 
-^Esc:: ExitApp ;; Salida de seguridad del script
+#Requires AutoHotkey v2.0.0+
+#SingleInstance Force
 
-#HotIf Winactive("ahk_exe Code.exe")
-~^s:: Reload ;; Guardar y recargar el script
+;! Uso solo para modo desarrollo
+#HotIf !A_IsCompiled and WinActive("ahk_exe Code.exe")
+^s:: {
+    Send("^s")  ;; Simula Ctrl+S para guardar el archivo
+    Sleep(100)  ;; Pequeño retraso para asegurar que el archivo se guarde
+    Reload()    ;; Recarga el script
+}
+#HotIf
+
+#HotIf !A_IsCompiled
+^Esc:: ExitApp(1) ;; Salida de seguridad del script
 #HotIf
 
 

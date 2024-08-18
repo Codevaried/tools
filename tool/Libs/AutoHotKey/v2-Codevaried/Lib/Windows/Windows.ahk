@@ -158,5 +158,5 @@ class Window {
      * @param {Boolean} on - Si es true, emite un sonido de tono alto. Si es false, emite un sonido de tono bajo.
      * @private
      */
-    static _SoundBeep(on) => on ? SoundBeep(500, 200) : SoundBeep(300, 200)
+    static _SoundBeep(on) => SetTimer(() => SoundBeep(on ? 500 : 300, 200), -1)
 }

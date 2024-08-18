@@ -4,8 +4,8 @@
 #NoTrayIcon
 */
 
-#Include "../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
-#Include "../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
+#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
+#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
 
 
 /**
