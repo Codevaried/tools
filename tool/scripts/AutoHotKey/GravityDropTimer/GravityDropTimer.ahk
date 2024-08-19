@@ -74,8 +74,8 @@ toggleTimer(ThisHotkey) {
         t.Stop()
         ModSoundBeep(false, 10)
 
-        ;; Convertir tiempo a segundos y calcular la altura teórica
-        seconds := t.ElapsedTime / 1000
+        ;; Obtener el tiempo en segundos y calcular la altura teórica
+        seconds := t.ElapsedTime["s"]
         g := 9.81  ;; Aceleración debida a la gravedad en m/s^2
         height := 0.5 * g * (seconds ** 2)
         height_rounded := Round(height, 2)  ;; Redondea a 2 decimales

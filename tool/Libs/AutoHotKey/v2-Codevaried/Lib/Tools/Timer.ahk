@@ -34,11 +34,24 @@ class Timer {
 	;^----------------Propiedades (Getters)----------------^;
 
 	/**
-	 * Propiedad que devuelve el tiempo transcurrido en milisegundos.
-	 * @returns {Integer} Tiempo transcurrido en milisegundos.
+	 * Propiedad que devuelve el tiempo transcurrido en la unidad especificada.
+	 * @param unit {String} Unidad de tiempo. Puede ser "ms" (milisegundos), "s" (segundos), "m" (minutos), o "h" (horas).
+	 * @returns {Float|Integer} Tiempo transcurrido en la unidad especificada.
 	 */
-	ElapsedTime {
-		get => this._isRunning ? this._elapsedTime + (A_TickCount - this._startTime) : this._elapsedTime
+	ElapsedTime[unit := "ms"] {
+		get {
+			elapsed := this._isRunning ? this._elapsedTime + (A_TickCount - this._startTime) : this._elapsedTime
+			switch unit {
+				case "s":
+					return elapsed / 1000
+				case "m":
+					return elapsed / 60000
+				case "h":
+					return elapsed / 3600000
+				default:
+					return elapsed ;; Devuelve en milisegundos por defecto
+			}
+		}
 	}
 
 	/**
@@ -59,6 +72,16 @@ class Timer {
 
 	;;MARK:*
 	;^----------------Funciones----------------^;
+
+	/**
+	 * Devuelve el tiempo transcurrido en la unidad especificada, recortando los decimales.
+	 * @param unit {String} Unidad de tiempo. Puede ser "ms" (milisegundos), "s" (segundos), "m" (minutos), o "h" (horas).
+	 * @returns {Integer} Tiempo transcurrido en la unidad especificada, sin decimales.
+	 */
+	GetElapsedTimeRounded(unit := "ms") {
+		elapsed := this.ElapsedTime[unit]
+		return Floor(elapsed)  ;; Devuelve el valor sin decimales
+	}
 
 	/**
 	 * Inicia el temporizador desde el estado detenido o reseteado.

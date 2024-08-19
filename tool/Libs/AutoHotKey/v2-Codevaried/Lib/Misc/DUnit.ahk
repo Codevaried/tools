@@ -2,11 +2,11 @@
 
 /**
  * @file DUnit.ahk
- * ! @version 0.3 (19.08.24) (*MOD*) 
+ * @version 0.4 (19.08.24) 
  * @created 18.08.24
  * @author Codevaried
  * @description
- * Esta biblioteca simplificada proporciona funciones para realizar pruebas unitarias en AHK v2.
+ * Esta biblioteca proporciona funciones para realizar pruebas unitarias en AHK v2.
  * 
  * Funciones incluidas:
  * - DUnit.Assert: Verifica una condición y lanza un error si es falsa.
@@ -14,14 +14,17 @@
  * - DUnit.False: Verifica si la condición dada es falsa.
  * - DUnit.Equal: Verifica si dos condiciones o valores son iguales.
  * - DUnit.NotEqual: Verifica si dos condiciones o valores no son iguales.
+ * - DUnit.Range: Verifica si un valor está dentro de un rango dado.
  * - DUnit.Throws: Verifica si una función lanza un error y opcionalmente verifica el tipo de error.
+ * 
  * - DUnit.RunTests: Ejecuta todos los métodos de prueba en clases dadas que comienzan con "Test_".
+ *   También maneja métodos opcionales como `Init` y `End` para inicialización y limpieza.
  * 
  * @credit
  * * Descolada - Autor original de la librería en la que se basa esta versión simplificada.
  * 
  * @note
- * * Esta es una versión modificada y simplificada de la librería original DUnit. La versión original se puede encontrar en el repositorio oficial de Descolada.
+ * * Esta es una versión modificada de la librería original DUnit. La versión original se puede encontrar en el repositorio oficial de Descolada.
  */
 
 
@@ -111,6 +114,7 @@ class DUnit {
      * Ejecuta todas las pruebas en las clases proporcionadas.
      * Cada clase se instancia y se ejecutan todos los métodos que comienzan con 'Test_'.
      * Los resultados de las pruebas se imprimen, incluyendo los éxitos y fallos.
+     * También maneja métodos opcionales como `Init` y `End` para inicialización y limpieza.
      * @param testClasses Clases que contienen los métodos de prueba.
      */
     static RunTests(testClasses*) {
@@ -129,6 +133,11 @@ class DUnit {
             className := Type(instance)
             Print("============", , , "")
             Print("Iniciando pruebas en la clase: " className, , , "*")
+
+            ;; Llamar al método Init si está definido
+            if instance.base.HasOwnProp("Init") {
+                instance.Init()
+            }
 
             classFails := 0, classSuccesses := 0  ;; Contadores para éxitos y fallos por clase
 
@@ -150,6 +159,11 @@ class DUnit {
                     classFails += fails
                     classSuccesses += successes
                 }
+            }
+
+            ;; Llamar al método End si está definido
+            if instance.base.HasOwnProp("End") {
+                instance.End()
             }
 
             ;; Imprime los resultados por clase
