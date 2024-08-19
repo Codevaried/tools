@@ -2,7 +2,7 @@
 
 /**
  * @file DUnit.ahk
- * ! @version 0.2 (19.08.24) (*MOD*) 
+ * ! @version 0.3 (19.08.24) (*MOD*) 
  * @created 18.08.24
  * @author Codevaried
  * @description
@@ -58,12 +58,11 @@ class DUnit {
      * @param a Primer valor.
      * @param b Segundo valor.
      * @param msg Mensaje de error si los valores no son iguales.
-     * @param n Posición del argumento en el error, por defecto es -1.
      */
-    static Equal(a, b, msg := "Not Equal", n := -1) {
+    static Equal(a, b, msg := "Not Equal") {
         DUnit.methodCount++
         if (a != b)
-            throw Error(msg, n, "(" a ") != (" b ")")
+            throw Error(msg, -1, "(" a ") != (" b ")")
     }
 
     /**
@@ -71,12 +70,23 @@ class DUnit {
      * @param a Primer valor.
      * @param b Segundo valor.
      * @param msg Mensaje de error si los valores son iguales.
-     * @param n Posición del argumento en el error, por defecto es -1.
      */
-    static NotEqual(a, b, msg := "Are Equal", n := -1) {
+    static NotEqual(a, b, msg := "Are Equal") {
         DUnit.methodCount++
         if (a == b)
-            throw Error(msg, n, "(" a ") == (" b ")")
+            throw Error(msg, -1, "(" a ") == (" b ")")
+    }
+
+    /**
+     * Verifica si un valor está dentro de un rango dado. Si no lo está, lanza un error con el mensaje especificado.
+     * @param value Valor a verificar.
+     * @param min Valor mínimo del rango.
+     * @param max Valor máximo del rango.
+     * @param msg Mensaje de error si el valor no está dentro del rango.
+     */
+    static Range(value, min, max, msg := "Value out of range") {
+        if (value < min || value > max)
+            throw Error(msg, -1, "Value: " value " is not between " min " and " max)
     }
 
     /**
