@@ -1,16 +1,19 @@
 ﻿/**
  * @file Timer.ahk
- * @version 0.1
+ * @version 0.2
  * @author Codevaried
  * @description
  * Esta clase proporciona la funcionalidad de un temporizador que permite iniciar, detener, reanudar, 
- * y resetear el tiempo transcurrido. 
+ * y resetear el tiempo transcurrido. También permite limpiar el tiempo transcurrido sin detener el temporizador.
  * 
  * Funciones incluidas:
  * - Start(): Inicia el temporizador desde el estado detenido o reseteado.
  * - Stop(): Detiene el temporizador y guarda el tiempo transcurrido.
  * - Resume(): Reanuda el temporizador desde donde fue detenido.
- * - Reset(): Resetea el temporizador a 0.
+ * - Reset(): Resetea el temporizador a 0 y lo detiene.
+ * - Clear(): Resetea el temporizador a 0 sin detenerlo.
+ * 
+ * Propiedades:
  * - ElapsedTime: Propiedad que devuelve el tiempo transcurrido en milisegundos.
  * - IsRunning: Propiedad que indica si el temporizador está en funcionamiento.
  * - StartTime: Propiedad que devuelve el tiempo de inicio del temporizador.
@@ -88,64 +91,21 @@ class Timer {
 	}
 
 	/**
-	 * Resetea el temporizador a 0.
+	 * Resetea el temporizador a 0 y lo detiene.
 	 */
 	Reset() {
 		this._elapsedTime := 0
 		this._isRunning := false
 	}
+
+	/**
+	 * Resetea el temporizador a 0 sin detenerlo.
+	 */
+	Clear() {
+		this._elapsedTime := 0
+		; Mantiene el temporizador corriendo
+		if this._isRunning {
+			this._startTime := A_TickCount ; Reinicia el tiempo de inicio para que ElapsedTime sea correcto
+		}
+	}
 }
-
-;! Modo desarrollo: Hotkeys para recargar el script y salida rápida
-#HotIf !A_IsCompiled and WinActive("ahk_exe Code.exe")
-~^s:: Reload()   ;; Guarda y recarga el script
-#HotIf
-
-#HotIf !A_IsCompiled
-^Esc:: ExitApp() ;; Salida de seguridad del script
-#HotIf
-
-
-;; Instanciando la clase Timer
-t := Timer()
-
-
-;; Test 0:
-t.Start()
-MsgBox(t.ElapsedTime . " ms")
-MsgBox(t.ElapsedTime . " ms")
-t.Reset()
-MsgBox(t.ElapsedTime . " ms")
-MsgBox(t.ElapsedTime . " ms")
-t.Stop()
-
-
-; ;; Test 1: Iniciar el temporizador
-; t.Start()
-; Sleep(1000)  ;; Esperar 1 segundo
-; t.Stop()
-; MsgBox("Test 1: ElapsedTime después de 1 segundo: " . t.ElapsedTime . " ms")  ;; Debería mostrar ~1000 ms
-
-; ;; Test 2: Reanudar el temporizador
-; t.Resume()
-; Sleep(500)  ;; Esperar 0.5 segundos adicionales
-; t.Stop()
-; MsgBox("Test 2: ElapsedTime después de reanudar 0.5 segundos: " . t.ElapsedTime . " ms")  ;; Debería mostrar ~1500 ms
-
-; ;; Test 3: Reiniciar el temporizador
-; t.Reset()
-; MsgBox("Test 3: ElapsedTime después de resetear: " . t.ElapsedTime . " ms")  ;; Debería mostrar 0 ms
-
-; ;; Test 4: Verificar si el temporizador está corriendo
-; t.Start()
-; Sleep(300)
-; MsgBox("Test 4: IsRunning (debería ser true): " . t.IsRunning)
-; t.Stop()
-; MsgBox("Test 4: IsRunning después de detener (debería ser false): " . t.IsRunning)
-
-; ;; Test 5: Comenzar de nuevo y verificar el tiempo transcurrido
-; t.Reset()
-; t.Start()
-; Sleep(700)  ;; Esperar 0.7 segundos
-; t.Stop()
-; MsgBox("Test 5: ElapsedTime después de 0.7 segundos: " . t.ElapsedTime . " ms")  ;; Debería mostrar ~700 ms

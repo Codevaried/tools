@@ -99,40 +99,57 @@ Swap(&a, &b) {
 
 /**
  * Imprime el valor formateado de una variable (número, cadena, objeto).
- * Dejar todos los parámetros vacíos devolverá la función actual y el carácter de nueva línea en un Array: [func, newline].
- * @param {*} [value] - Opcional: la variable a imprimir.
- *     Si se omite, se establecerán nuevas configuraciones (función de salida y nueva línea).
- *     Si el valor es un objeto/clase que tiene un método ToString(), entonces se imprimirá el resultado de ese método.
- * @param {Function} [func] - Opcional: la función de impresión a usar. Por defecto es OutputDebug.
- *     No proporcionar una función hará que la salida de Print simplemente se devuelva como una cadena.
- * @param {String} [newline] - Opcional: el carácter de nueva línea a usar (aplicado al final del valor). 
- *     Por defecto es newline (`n).
- * @returns {String|Array} - Devuelve el valor formateado o un array con la función actual y el carácter de nueva línea.
+ * Si no se proporciona ningún valor, devuelve la configuración actual de la función de salida y el carácter de nueva línea.
+ * 
+ * @param {*} [value] - Opcional: la variable a imprimir. 
+ *     Si se omite, se devolverán las configuraciones actuales (función de salida y nueva línea).
+ *     Si el valor es un objeto o clase que tiene un método ToString(), se imprimirá el resultado de ese método.
+ * @param {Function} [func=OutputDebug] - Opcional: la función de impresión a usar. 
+ *     Por defecto es OutputDebug. Si no se proporciona una función, se usará la función almacenada en `p`.
+ * @param {String} [newline="`n"] - Opcional: el carácter de nueva línea a usar (se aplica al final del valor). 
+ *     Por defecto es newline (`n). Si no se proporciona, se usará el valor almacenado en `nl`.
+ * @param {String} [title] - Opcional: el título que se mostrará en el MsgBox o en la salida. 
+ *     Si se omite (es decir, no se establece con `IsSet`), se capturará el número de línea desde donde se llama a `Print`.
+ *     Si `title` es una cadena vacía (`""`), no se mostrará ningún título.
+ * 
+ * @returns {String|Array} - Devuelve el valor formateado con el título y la nueva línea, o un array con la función actual y el carácter de nueva línea si no se proporciona `value`.
+ * 
+ * @note
+ * Si `title` no se proporciona (unset), la función capturará automáticamente el número de línea desde donde se llama.
+ * Si `title` es una cadena vacía, el título no se mostrará en la salida.
  */
-Print(value?, func?, newline?) {
+Print(value?, func := OutputDebug, newline := "`n", title?) {
 	static p := OutputDebug, nl := "`n"
-	if IsSet(func)
-		p := func
-	if IsSet(newline)
-		nl := newline
 
-	;; Capturar el número de línea utilizando una excepción
-	try {
-		;; Forzar una excepción para capturar el contexto de la llamada
-		throw ValueError("Capturing line number", -1)
-	} catch ValueError as err {
-		callerLine := err.Line
+	;; Si se proporcionan func y newline, actualizar los valores por defecto.
+	p := IsSet(func) ? func : p
+	nl := IsSet(newline) ? newline : nl
+
+	;; Capturar el número de línea si title no se proporciona (unset).
+	if !IsSet(title) {
+		try {
+			throw ValueError("Capturing line number", -1)
+		} catch ValueError as err {
+			callerLine := err.Line
+		}
+		title := "line:" callerLine
 	}
 
+	;; Formatear el valor y la salida.
 	if IsSet(value) {
 		val := IsObject(value) ? ToString(value) nl : value nl
 		output := val
-		if (p = MsgBox) {
-			return p(output, "MsgBox Line [" callerLine "]")
-		} else {
-			return HasMethod(p) ? p("[line:" callerLine "] " output) : "[" callerLine "] " output
-		}
+
+		;; Si el título es una cadena vacía, no mostrar el título.
+		if (title = "")
+			return HasMethod(p) ? p(output) : output
+		else if (p = MsgBox)
+			return p(output, title)
+		else
+			return HasMethod(p) ? p("[" title "] " output) : "[" title "] " output
 	}
+
+	;; Devolver la configuración actual si no se proporciona un valor.
 	return [p, nl]
 }
 

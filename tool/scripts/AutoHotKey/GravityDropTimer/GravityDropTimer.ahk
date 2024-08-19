@@ -2,7 +2,7 @@
 #SingleInstance Force
 
 /**
- * @file Temporizador y cálculo de altura/velocidad terminal en caída libre
+ * @file GravityDropTimer (Temporizador y cálculo de altura/velocidad terminal en caída libre)
  * @version 0.1 (18.08.24)
  * @created 18.08.24
  * @author Codevaried
@@ -12,14 +12,14 @@
  * basada en el tiempo transcurrido utilizando las leyes de la física.
  * 
  * @note Este cálculo asume un modelo ideal de caída libre sin resistencia del aire, 
- *       lo cual es válido para estimaciones en alturas moderadas como 15-25 metros.
+ *       lo cual es válido para estimaciones en alturas moderadas como 5-25 ~ metros.
  */
 
 ;;MARK:*
 ;^----------------Configuración Inicial----------------^;
 
 ;; Incluir la clase Timer desde un archivo externo
-#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Tools/Timer.ahk"
+#Include "../../../Libs/AutoHotKey/v2-Codevaried/Lib/Tools/Timer.ahk"
 
 ;; Establece la prioridad del proceso en muy alta utilizando una función nativa de AutoHotkey
 ProcessSetPriority("High")
@@ -36,11 +36,11 @@ ProcessSetPriority("High")
 ;;MARK:*
 ;^----------------Definición de Hotkeys----------------^;
 
-;; Define la tecla o botón para iniciar/detener el temporizador
-; key := "~Space"
+;*** Define la tecla o botón para iniciar/detener el temporizador
+key := "~Space"
 ; key := "~^LButton"
 ; key := "~LButton"
-key := "F12"
+; key := "F12"
 Hotkey(key, toggleTimer, "P10")  ;; Asigna la hotkey con alta prioridad
 
 ;;MARK:*
@@ -105,6 +105,6 @@ toggleTimer(ThisHotkey) {
     } else {
         t.Reset()  ;; Reinicia el temporizador a cero antes de iniciarlo nuevamente
         t.Start()
-        ModSoundBeep(true) ;; Si esta línea está activada habrá un delay de unos milisegundos antes de poder volver a ejecutar esta función
+        ModSoundBeep(true) ;;! Si esta línea está activada habrá un delay de unos milisegundos antes de poder volver a ejecutar esta función
     }
 }
