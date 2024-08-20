@@ -1,5 +1,6 @@
 #include "../Lib/Misc/DUnit.ahk"
 #include "Test_Timer.ahk"
+#include "Test_DUnit.ahk"
 
 
 ;! Modo desarrollo: Hotkeys para recargar el script y salida rápida
@@ -11,5 +12,8 @@
 ^Esc:: ExitApp() ;; Salida de seguridad del script
 #HotIf
 
-;; Ejecutar los tests de la clase TimerTestSuite
-DUnit.RunTests(TimerTestSuite)
+
+DUnit.SetOptions("+V") ;; Establece Verbose en true
+
+;; Ejecutar los tests de la clase DUnitTestSuite y TimerTestSuite
+DUnit.RunTests(DUnitTestSuite, TimerTestSuite)

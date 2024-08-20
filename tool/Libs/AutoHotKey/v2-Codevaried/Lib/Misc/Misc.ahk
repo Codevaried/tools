@@ -131,8 +131,9 @@ Print(value?, func := OutputDebug, newline := "`n", title?) {
 			throw ValueError("Capturing line number", -1)
 		} catch ValueError as err {
 			callerLine := err.Line
+			SplitPath(err.File, &f)
 		}
-		title := "line:" callerLine
+		title := f ":" callerLine
 	}
 
 	;; Formatear el valor y la salida.
@@ -146,7 +147,7 @@ Print(value?, func := OutputDebug, newline := "`n", title?) {
 		else if (p = MsgBox)
 			return p(output, title)
 		else
-			return HasMethod(p) ? p("[" title "] " output) : "[" title "] " output
+			return HasMethod(p) ? p("{" title "} " output) : "{" title "} " output
 	}
 
 	;; Devolver la configuración actual si no se proporciona un valor.
