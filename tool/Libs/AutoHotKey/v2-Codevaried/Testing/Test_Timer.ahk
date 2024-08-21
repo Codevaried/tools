@@ -2,6 +2,41 @@
 
 class TimerTestSuite {
 
+    /**
+     * Método `End` que se ejecuta al finalizar todas las pruebas en la clase.
+     * En este ejemplo, se utiliza para medir el tiempo transcurrido utilizando un temporizador
+     * y mostrar los resultados en diferentes unidades de tiempo.
+     */
+    End() {
+        ;; Crear una instancia de la clase Timer
+        t := Timer()
+
+        ;; Iniciar el temporizador
+        t.Start()
+
+        ;; Esperar 1000 milisegundos (1 segundo)
+        Sleep(1000)
+
+        ;; Detener el temporizador
+        t.Stop()
+
+        ;; Construir el mensaje con los diferentes tiempos transcurridos
+        msg := "Tiempo transcurrido:`n"
+        msg .= "Milisegundos (con decimales): " t.ElapsedTime["ms"] " ms`n"
+        msg .= "Segundos (con decimales): " t.ElapsedTime["s"] " s`n"
+        msg .= "Minutos (con decimales): " t.ElapsedTime["m"] " m`n"
+        msg .= "Horas (con decimales): " t.ElapsedTime["h"] " h`n`n"
+        msg .= "Milisegundos (redondeado): " t.GetElapsedTimeRounded("ms") " ms`n"
+        msg .= "Segundos (redondeado): " t.GetElapsedTimeRounded("s") " s`n"
+        msg .= "Minutos (redondeado): " t.GetElapsedTimeRounded("m") " m`n"
+        msg .= "Horas (redondeado): " t.GetElapsedTimeRounded("h") " h"
+
+        ;; Mostrar el mensaje
+        Print(msg)
+        ; Print(msg, , MsgBox)
+    }
+
+
     ;; Test 1: Iniciar el temporizador y verificar el tiempo transcurrido
     Test_StartStop() {
         t := Timer()
@@ -91,37 +126,4 @@ class TimerTestSuite {
         DUnit.Equal(t.ElapsedTime, 500, "El tiempo transcurrido debe ser de aproximadamente 500 ms después de Clear.")
     }
 
-    /**
-     * Método `End` que se ejecuta al finalizar todas las pruebas en la clase.
-     * En este ejemplo, se utiliza para medir el tiempo transcurrido utilizando un temporizador
-     * y mostrar los resultados en diferentes unidades de tiempo.
-     */
-    End() {
-        ;; Crear una instancia de la clase Timer
-        t := Timer()
-
-        ;; Iniciar el temporizador
-        t.Start()
-
-        ;; Esperar 1000 milisegundos (1 segundo)
-        Sleep(1000)
-
-        ;; Detener el temporizador
-        t.Stop()
-
-        ;; Construir el mensaje con los diferentes tiempos transcurridos
-        msg := "Tiempo transcurrido:`n`n"
-        msg .= "Milisegundos (con decimales): " t.ElapsedTime["ms"] " ms`n"
-        msg .= "Segundos (con decimales): " t.ElapsedTime["s"] " s`n"
-        msg .= "Minutos (con decimales): " t.ElapsedTime["m"] " m`n"
-        msg .= "Horas (con decimales): " t.ElapsedTime["h"] " h`n`n"
-        msg .= "Milisegundos (redondeado): " t.GetElapsedTimeRounded("ms") " ms`n"
-        msg .= "Segundos (redondeado): " t.GetElapsedTimeRounded("s") " s`n"
-        msg .= "Minutos (redondeado): " t.GetElapsedTimeRounded("m") " m`n"
-        msg .= "Horas (redondeado): " t.GetElapsedTimeRounded("h") " h"
-
-        ;; Mostrar el mensaje
-        MsgBox(msg)
-        ; OutputDebug("_________________________`n" msg "`n_________________________")
-    }
 }

@@ -1,6 +1,6 @@
 ﻿/**
  * @file Misc.ahk
- * ! @version 0.3 (03.08.23) (*MOD*)
+ * ! @version 0.5 (21.08.24) (*MOD*)
  * @created 26.08.22
  * @author Descolada (https://www.autohotkey.com/boards/viewtopic.php?f=83&t=107759)
  * @description
@@ -11,7 +11,7 @@
  * Funciones incluidas:
  * - Range: Devuelve un iterable para contar desde un número inicial hasta un número final con un paso opcional.
  * - Swap: Intercambia los valores de dos variables.
- * - Print: Imprime el valor formateado de una variable.
+ * - Print: Imprime el valor formateado de una variable, con soporte para personalizar la función de salida.
  * - RegExMatchAll: Devuelve todos los resultados de RegExMatch en un array.
  * - WindowFromPoint: Devuelve el ID de la ventana en las coordenadas de pantalla X e Y.
  * - ConvertWinPos: Convierte coordenadas entre pantalla, ventana y cliente.
@@ -19,10 +19,11 @@
  * - GetCaretPos: Obtiene la posición del cursor.
  * - IntersectRect: Verifica si dos rectángulos se intersectan y devuelve el rectángulo de la intersección.
  * 
- * @credit Coco
+ * @credit
+ * * Coco y Descolada - Agradecimientos especiales por la creación de esta magnífica librería y otras contribuciones.
+ * 
  * @note
  * * Esta es una versión modificada de la librería original. La versión original puede encontrarse en el repositorio oficial de Descolada.
- * * Agradecimientos especiales a Descolada y Coco por la creación de esta magnífica librería y otras contribuciones.
  */
 
 /**
@@ -99,31 +100,27 @@ Swap(&a, &b) {
 
 /**
  * Imprime el valor formateado de una variable (número, cadena, objeto).
- * Si no se proporciona ningún valor, devuelve la configuración actual de la función de salida y el carácter de nueva línea.
+ * Si no se proporciona ningún valor, devuelve la configuración actual de la función de salida.
  * 
  * @param {*} [value] - Opcional: la variable a imprimir. 
- *     Si se omite, se devolverán las configuraciones actuales (función de salida y nueva línea).
  *     Si el valor es un objeto o clase que tiene un método ToString(), se imprimirá el resultado de ese método.
- * @param {Function} [func=OutputDebug] - Opcional: la función de impresión a usar. 
- *     Por defecto es OutputDebug. Si no se proporciona una función, se usará la función almacenada en `p`.
- * @param {String} [newline="`n"] - Opcional: el carácter de nueva línea a usar (se aplica al final del valor). 
- *     Por defecto es newline (`n). Si no se proporciona, se usará el valor almacenado en `nl`.
- * @param {String} [title] - Opcional: el título que se mostrará en el MsgBox o en la salida. 
- *     Si se omite (es decir, no se establece con `IsSet`), se capturará el número de línea desde donde se llama a `Print`.
+ * @param {String} [title] - Opcional: el título que se mostrará en la salida. 
+ *     Si se omite (no se establece con `IsSet`), se capturará el número de línea desde donde se llama a `Print`.
  *     Si `title` es una cadena vacía (`""`), no se mostrará ningún título.
+ * @param {Function} [func=OutputDebug] - Opcional: la función de impresión a usar. 
+ *     Por defecto es `OutputDebug`. Si no se proporciona una función, se usará la función almacenada en `p`.
  * 
- * @returns {String|Array} - Devuelve el valor formateado con el título y la nueva línea, o un array con la función actual y el carácter de nueva línea si no se proporciona `value`.
+ * @returns {String|Array} - Devuelve el valor formateado con el título, o un array con la función actual si no se proporciona `value`.
  * 
  * @note
  * Si `title` no se proporciona (unset), la función capturará automáticamente el número de línea desde donde se llama.
  * Si `title` es una cadena vacía, el título no se mostrará en la salida.
  */
-Print(value?, func := OutputDebug, newline := "`n", title?) {
-	static p := OutputDebug, nl := "`n"
+Print(value?, title?, func := OutputDebug) {
+	static p := OutputDebug
 
-	;; Si se proporcionan func y newline, actualizar los valores por defecto.
+	;; Actualizar la función de salida si se proporciona una nueva.
 	p := IsSet(func) ? func : p
-	nl := IsSet(newline) ? newline : nl
 
 	;; Capturar el número de línea si title no se proporciona (unset).
 	if !IsSet(title) {
@@ -138,20 +135,23 @@ Print(value?, func := OutputDebug, newline := "`n", title?) {
 
 	;; Formatear el valor y la salida.
 	if IsSet(value) {
-		val := IsObject(value) ? ToString(value) nl : value nl
+		val := IsObject(value) ? ToString(value) : value
 		output := val
 
 		;; Si el título es una cadena vacía, no mostrar el título.
-		if (title = "")
-			return HasMethod(p) ? p(output) : output
-		else if (p = MsgBox)
-			return p(output, title)
-		else
-			return HasMethod(p) ? p("{" title "} " output) : "{" title "} " output
+		if (title = "") {
+			HasMethod(p) ? p(output) : output
+		} else if (p = MsgBox)
+			p(output, title)
+		else {
+			if (title != "null")
+				HasMethod(p) ? p("{" title "} " output) : "{" title "} " output
+		}
+		return output
 	}
 
 	;; Devolver la configuración actual si no se proporciona un valor.
-	return [p, nl]
+	return [p]
 }
 
 

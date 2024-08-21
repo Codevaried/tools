@@ -2,7 +2,7 @@
 
 /**
  * @file DUnit.ahk
- * @version 0.5 (20.08.24)
+ * @version 0.6 (21.08.24)
  * @created 18.08.24
  * @author Codevaried
  * @description
@@ -118,8 +118,8 @@ class DUnit {
         totalFails := 0, totalSuccesses := 0, startTime := A_TickCount
 
         ;; Imprime la línea de separación inicial
-        Print("", , , "")
-        Print("========================", , , "")
+        Print("", "")
+        Print("========================", "")
 
         for testClass in testClasses {
             if !IsObject(testClass) {
@@ -128,8 +128,8 @@ class DUnit {
 
             instance := testClass()
             className := Type(instance)
-            Print("============", , , "")
-            Print("Iniciando pruebas en la clase: " className, , , "-")
+            Print("============", "")
+            Print("Iniciando pruebas en la clase: " className, "-")
 
             ;; Llamar al método Init si está definido
             if instance.base.HasOwnProp("Init") {
@@ -143,18 +143,29 @@ class DUnit {
                     DUnit._methodCount := 0 ;; Resetear el contador para cada método de prueba
                     methodName := test
 
+                    ;; Llamar al método InitTest si está definido
+                    if instance.base.HasOwnProp("InitTest") {
+                        instance.InitTest()
+                    }
+
                     try {
                         instance.%test%()
                         classSuccesses++
                         if DUnit._config.Verbose
-                            Print(methodName, , , "Success")
+                            Print(methodName, "Success")
                     } catch as e {
                         classFails++  ;; Incrementa el contador de fallos de la clase
                         SplitPath(e.File, &f)
-                        Print(methodName ":" DUnit._methodCount ":`n - " f ":line:" e.Line " -> " e.Extra "`n - " e.Message, , , "Fail")
+                        Print(methodName ":" DUnit._methodCount ":`n - " f ":line:" e.Line " -> " e.Extra "`n - " e.Message, "Fail")
                         if DUnit._config.FailFast
                             break
                     }
+
+                    ;; Llamar al método EndTest si está definido
+                    if instance.base.HasOwnProp("EndTest") {
+                        instance.EndTest()
+                    }
+
                 }
             }
 
@@ -164,7 +175,7 @@ class DUnit {
             }
 
             ;; Imprime los resultados por clase
-            Print("Resultados para la clase " className ": " classSuccesses " successes, " classFails " errors.", , , "-")
+            Print("Resultados para la clase " className ": " classSuccesses " successes, " classFails " errors.", "-")
             totalFails += classFails  ;; Acumula los fallos de la clase en el total
             totalSuccesses += classSuccesses  ;; Acumula los éxitos de la clase en el total
 
@@ -175,15 +186,15 @@ class DUnit {
         ;; Imprime los resultados totales
         totalTests := totalFails + totalSuccesses
         elapsedTime := Round((A_TickCount - startTime) / 1000, 3)
-        Print("============", , , "")
-        Print("========================", , , "")
-        Print("Total de " totalTests " tests en " elapsedTime "s: " totalSuccesses " successes, " totalFails " errors.", , , "#")
+        Print("============", "")
+        Print("========================", "")
+        Print("Total de " totalTests " tests en " elapsedTime "s: " totalSuccesses " successes, " totalFails " errors.", "#")
 
         ;; Imprime el resumen
         if totalFails > 0 {
-            Print("Resumen: Algunas pruebas fallaron.", , , "Warning")
+            Print("Resumen: Algunas pruebas fallaron.", "# Warning")
         } else {
-            Print("Resumen: Todas las pruebas pasaron con éxito.", , , "Success")
+            Print("Resumen: Todas las pruebas pasaron con éxito.", "# Success")
         }
     }
 
@@ -232,8 +243,14 @@ class DUnit {
      */
     static Equal(a, b, msg := "Not Equal") {
         DUnit._methodCount++
-        if (a != b)
-            throw Error(msg, -1, "(" a ") != (" b ")")
+        currentListLines := A_ListLines
+        ListLines 0  ;; Desactiva temporalmente la visualización de líneas en la consola
+
+        pa := Print(a, "null")
+        pb := Print(b, "null")
+        if (pa !== pb)
+            throw Error(msg, -1, "('" pa "' !== '" pb "')")
+        ListLines currentListLines  ;; Restaura el estado original de A_ListLines
     }
 
     /**
@@ -244,8 +261,14 @@ class DUnit {
      */
     static NotEqual(a, b, msg := "Are Equal") {
         DUnit._methodCount++
-        if (a == b)
-            throw Error(msg, -1, "(" a ") == (" b ")")
+        currentListLines := A_ListLines
+        ListLines 0  ;; Desactiva temporalmente la visualización de líneas en la consola
+
+        pa := Print(a, "null")
+        pb := Print(b, "null")
+        if (pa == pb)
+            throw Error(msg, -1, "('" pa "' == '" pb "')")
+        ListLines currentListLines  ;; Restaura el estado original de A_ListLines
     }
 
     /**

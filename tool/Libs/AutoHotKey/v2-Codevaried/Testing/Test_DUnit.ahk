@@ -10,6 +10,17 @@
         Print("Finalizando el entorno de pruebas...")
     }
 
+    ;; Este método se ejecuta antes de cualquier prueba en la clase
+    InitTest() {
+        Print("Inicializando un Test", "")
+    }
+
+    ;; Este método se ejecuta después de que todas las pruebas en la clase hayan terminado
+    EndTest() {
+        Print("Finalizando un Test", "")
+    }
+
+    
     ;; Prueba 1: Verifica que una condición verdadera pase
     Test_TrueCondition() {
         DUnit.True(1 = 1, "1 debería ser igual a 1")
