@@ -1,4 +1,4 @@
-# Documentación de la Librería `_Map`
+# Documentación de la Librería `_Map` (NO COMPLETA)
 
 Estos métodos no pueden ser usados de forma independiente. Para hacerlo, debe agregar otro argumento 'map' a la función y reemplazar todas las ocurrencias de 'this' con 'map'.
 
