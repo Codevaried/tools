@@ -102,19 +102,41 @@ Swap(&a, &b) {
  * Imprime el valor formateado de una variable (número, cadena, objeto).
  * Si no se proporciona ningún valor, devuelve la configuración actual de la función de salida.
  * 
- * @param {*} [value] - Opcional: la variable a imprimir. 
- *     Si el valor es un objeto o clase que tiene un método ToString(), se imprimirá el resultado de ese método.
- * @param {String} [title] - Opcional: el título que se mostrará en la salida. 
- *     Si se omite (no se establece con `IsSet`), se capturará el número de línea desde donde se llama a `Print`.
- *     Si `title` es una cadena vacía (`""`), no se mostrará ningún título.
- * @param {Function} [func=OutputDebug] - Opcional: la función de impresión a usar. 
- *     Por defecto es `OutputDebug`. Si no se proporciona una función, se usará la función almacenada en `p`.
+ * Esta función es flexible y permite especificar tanto el formato de salida como el título que se mostrará.
+ * Si la variable a imprimir es un objeto o clase que implementa el método `ToString`, 
+ * se utilizará el resultado de dicho método para la impresión. Además, es posible cambiar la función 
+ * de salida predeterminada (que es `OutputDebug`) por cualquier otra función de impresión, como `MsgBox`.
  * 
- * @returns {String|Array} - Devuelve el valor formateado con el título, o un array con la función actual si no se proporciona `value`.
+ * @param {*} [value] - Opcional: La variable a imprimir. Puede ser de cualquier tipo, 
+ * incluyendo números, cadenas, arrays u objetos. Si es un objeto con un método `ToString`, 
+ * se imprimirá el resultado de ese método.
+ * 
+ * @param {String} [title] - Opcional: El título que se mostrará junto al valor impreso. 
+ * Si se omite (no se establece con `IsSet`), la función capturará automáticamente el número de línea 
+ * desde donde se llama a `Print` y lo utilizará como título. Si `title` es una cadena vacía (`""`), 
+ * no se mostrará ningún título.
+ * 
+ * @param {Function} [func=OutputDebug] - Opcional: La función de impresión a usar. Por defecto es `OutputDebug`, 
+ * pero se puede reemplazar por cualquier función que maneje la salida, como `MsgBox`. 
+ * Si no se proporciona una nueva función, se utilizará la función almacenada previamente.
+ * 
+ * @returns {String|Array} - Si se proporciona un valor, la función devuelve el valor formateado con el título y la nueva línea. 
+ * Si no se proporciona un valor, devuelve un array con la función de salida actual.
+ * 
+ * @example
+ * ; Ejemplo 1: Imprimir un valor con un título personalizado.
+ * Print("Este es un mensaje", "Título Personalizado")
+ * 
+ * ; Ejemplo 2: Cambiar la función de salida a MsgBox.
+ * Print("Este es un mensaje", "Aviso", MsgBox)
+ * 
+ * ; Ejemplo 3: Imprimir un objeto con ToString().
+ * obj := {ToString: () => "Descripción del objeto"}
+ * Print(obj)
  * 
  * @note
- * Si `title` no se proporciona (unset), la función capturará automáticamente el número de línea desde donde se llama.
- * Si `title` es una cadena vacía, el título no se mostrará en la salida.
+ * - Si `title` no se proporciona, la función intentará capturar automáticamente el número de línea desde donde se llamó.
+ * - Si `title` es una cadena vacía, no se mostrará ningún título en la salida.
  */
 Print(value?, title?, func := OutputDebug) {
 	static p := OutputDebug

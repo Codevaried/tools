@@ -20,7 +20,7 @@
         Print("Finalizando un Test", "")
     }
 
-    
+
     ;; Prueba 1: Verifica que una condición verdadera pase
     Test_TrueCondition() {
         DUnit.True(1 = 1, "1 debería ser igual a 1")

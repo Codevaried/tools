@@ -24,11 +24,22 @@
 #HotIf
 
 
-DUnit.SetOptions("+V -F") ;; Establece Verbose en true
+RunTests() {
+    DUnit.SetOptions("+F")
+    if DUnit.RunTests(DUnitTestSuite).errors
+        return 1 ;; Aborted
 
 
-DUnit.RunTests(DUnitTestSuite)
+    DUnit.SetOptions("-F")
+    if DUnit.RunTests(MiscTestSuite).errors
+        return 1 ;; Aborted
 
-DUnit.RunTests(ArrayTestSuite, MapTestSuite, StringTestSuite)
 
-DUnit.RunTests(TimerTestSuite)
+    DUnit.RunTests(ArrayTestSuite, MapTestSuite, StringTestSuite)
+
+    DUnit.SetOptions("+V")
+    DUnit.RunTests(TimerTestSuite)
+}
+
+if RunTests()
+    Print(A_ScriptName ":RunTests -> Aborted", "#FAIL")

@@ -53,6 +53,17 @@ class DUnit {
     static _config := { Verbose: unset, FailFast: unset }
 
 
+    ;todo---MARK: Config&Use
+
+
+    ;
+    ;
+    ;
+
+
+    ;;MARK:*
+    ;^----------------SetOptions----------------^;
+
     /**
      * Aplica opciones de DUnit.
      * 
@@ -107,15 +118,60 @@ class DUnit {
      */
     static __New() => DUnit.SetOptions()
 
+
+    ;;MARK:*
+    ;^----------------RunTests----------------^;
+
     /**
      * Ejecuta todas las pruebas en las clases proporcionadas.
-     * Cada clase se instancia y se ejecutan todos los métodos que comienzan con 'Test_'.
-     * Los resultados de las pruebas se imprimen, incluyendo los éxitos y fallos.
-     * También maneja métodos opcionales como `Init` y `End` para inicialización y limpieza.
-     * @param testClasses Clases que contienen los métodos de prueba.
+     * 
+     * Este método itera a través de un conjunto de clases de prueba, instanciando cada una y ejecutando 
+     * todos los métodos que comienzan con 'Test_'. Para cada clase, se ejecutan los métodos `Init` y `End`, 
+     * si están definidos, antes y después de las pruebas, respectivamente. También se ejecutan los métodos 
+     * `InitTest` y `EndTest` antes y después de cada prueba individual, si están definidos. Los resultados 
+     * de las pruebas se imprimen, incluyendo los éxitos y fallos, y se proporciona un resumen final. Además, 
+     * se imprime un registro de las opciones activas durante las pruebas (`Verbose` y `FailFast`).
+     * 
+     * @param {Object} testClasses* - Lista de clases de prueba que contienen los métodos de prueba.
+     * 
+     * @returns {Object} - Un objeto que contiene el total de pruebas ejecutadas (`total`), 
+     * el número de pruebas exitosas (`successes`), el número de pruebas fallidas (`errors`), 
+     * el tiempo total de ejecución en milisegundos (`time`), y las opciones activas durante las pruebas (`opc`).
+     * 
+     * @example
+     * class MyTests {
+     *     Init() {
+     *         ; Configuración antes de las pruebas de la clase
+     *     }
+     *     InitTest() {
+     *         ; Configuración antes de cada prueba individual
+     *     }
+     *     Test_Example1() {
+     *         ; Primera prueba
+     *         DUnit.True(1 = 1)
+     *     }
+     *     Test_Example2() {
+     *         ; Segunda prueba
+     *         DUnit.False(1 = 2)
+     *     }
+     *     EndTest() {
+     *         ; Limpieza después de cada prueba individual
+     *     }
+     *     End() {
+     *         ; Limpieza después de todas las pruebas de la clase
+     *     }
+     * }
+     * DUnit.RunTests(MyTests)
      */
     static RunTests(testClasses*) {
+
+        failFast := DUnit._config.FailFast
+        verbose := DUnit._config.Verbose
+
         totalFails := 0, totalSuccesses := 0, startTime := A_TickCount
+
+        ;; Contadores para los métodos `Test_*` de la clase
+        totalTests := 0
 
         ;; Imprime la línea de separación inicial
         Print("", "")
@@ -139,6 +195,12 @@ class DUnit {
             classFails := 0, classSuccesses := 0  ;; Contadores para éxitos y fallos por clase
 
             for test in ObjOwnProps(testClass.Prototype) {
+                if (SubStr(test, 1, 5) = "Test_") { ;; Cuenta solo los métodos que comienzan con 'Test_'
+                    totalTests++
+                }
+            }
+
+            for test in ObjOwnProps(testClass.Prototype) {
                 if (SubStr(test, 1, 5) = "Test_") { ;; Ejecuta solo los métodos que comienzan con 'Test_'
                     DUnit._methodCount := 0 ;; Resetear el contador para cada método de prueba
                     methodName := test
@@ -151,13 +213,13 @@ class DUnit {
                     try {
                         instance.%test%()
                         classSuccesses++
-                        if DUnit._config.Verbose
+                        if verbose
                             Print(methodName, "Success")
                     } catch as e {
                         classFails++  ;; Incrementa el contador de fallos de la clase
                         SplitPath(e.File, &f)
                         Print(methodName ":" DUnit._methodCount ":`n - " f ":line:" e.Line " -> " e.Extra "`n - " e.Message, "Fail")
-                        if DUnit._config.FailFast
+                        if failFast
                             break
                     }
 
@@ -165,7 +227,6 @@ class DUnit {
                     if instance.base.HasOwnProp("EndTest") {
                         instance.EndTest()
                     }
-
                 }
             }
 
@@ -179,23 +240,32 @@ class DUnit {
             totalFails += classFails  ;; Acumula los fallos de la clase en el total
             totalSuccesses += classSuccesses  ;; Acumula los éxitos de la clase en el total
 
-            if DUnit._config.FailFast && classFails > 0
+            if failFast && classFails > 0
                 break
         }
 
         ;; Imprime los resultados totales
-        totalTests := totalFails + totalSuccesses
-        elapsedTime := Round((A_TickCount - startTime) / 1000, 3)
+        elapsedTime := (A_TickCount - startTime)
+        elapsedTimeS := Round(elapsedTime / 1000, 3)
+
         Print("============", "")
         Print("========================", "")
-        Print("Total de " totalTests " tests en " elapsedTime "s: " totalSuccesses " successes, " totalFails " errors.", "#")
+        Print("Total de " totalTests " tests en " elapsedTimeS "s: " totalSuccesses " successes, " totalFails " errors. [ " totalSuccesses "/" totalTests " (" Round(totalSuccesses * 100 / totalTests) "%)" (failFast && totalFails >= 1 ? " Aborted failFast" : "") " ]", "#")
+
+        ;; Imprime las opciones activas durante el test
+        Print("Opciones activas: " "Verbose=" (verbose ? "ON" : "OFF") ", " "FailFast=" (failFast ? "ON" : "OFF"), "#")
 
         ;; Imprime el resumen
-        if totalFails > 0 {
+        if totalFails == totalTests {
+            Print("Resumen: Todas las pruebas fallaron.", "# Fail")
+        } else if totalFails > 0 {
             Print("Resumen: Algunas pruebas fallaron.", "# Warning")
         } else {
             Print("Resumen: Todas las pruebas pasaron con éxito.", "# Success")
         }
+
+        return { opc: { failFast: failFast, verbose: verbose },
+            total: totalTests, successes: totalSuccesses, errors: totalFails, time: elapsedTime }
     }
 
 
