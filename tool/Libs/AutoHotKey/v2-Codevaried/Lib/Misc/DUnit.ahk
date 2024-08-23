@@ -2,7 +2,7 @@
 
 /**
  * @file DUnit.ahk
- * @version 0.6 (21.08.24)
+ * @version 0.7 (23.08.24)
  * @created 18.08.24
  * @author Codevaried
  * @description
@@ -134,9 +134,19 @@ class DUnit {
      * 
      * @param {Object} testClasses* - Lista de clases de prueba que contienen los métodos de prueba.
      * 
-     * @returns {Object} - Un objeto que contiene el total de pruebas ejecutadas (`total`), 
-     * el número de pruebas exitosas (`successes`), el número de pruebas fallidas (`errors`), 
-     * el tiempo total de ejecución en milisegundos (`time`), y las opciones activas durante las pruebas (`opc`).
+     * @returns {Object} Un objeto con las siguientes propiedades:
+     * - `total` {Number}: El número total de pruebas ejecutadas.
+     * - `successes` {Number}: El número de pruebas exitosas.
+     * - `errors` {Number}: El número de pruebas fallidas.
+     * - `time` {Number}: El tiempo total de ejecución en milisegundos.
+     * - `opc` {Object}: Un objeto que indica las opciones activas durante las pruebas (`failFast`, `verbose`).
+     * - `classTests` {Object}: Un objeto con un resumen detallado de las clases evaluadas:
+     *   - `successes` {Array}: Lista de nombres de las clases que pasaron todas las pruebas.
+     *   - `errors` {Array}: Lista de nombres de las clases que tuvieron fallos.
+     *   - `notEvaluated` {Array}: Lista de nombres de las clases que no se evaluaron (debido a `failFast`).
+     *   - `total` {Array}: Lista completa de todas las clases proporcionadas para la prueba.
+     * 
+     * @throws {TypeError} Si algún argumento proporcionado no es una clase válida o si no se proporcionan clases.
      * 
      * @example
      * class MyTests {
@@ -165,32 +175,40 @@ class DUnit {
      */
     static RunTests(testClasses*) {
 
+        ;; Verifica que se hayan pasado clases de prueba
+        if (testClasses.Length = 0)
+            throw ValueError("Debe proporcionar al menos una clase de prueba a RunTests.", -1)
+
+        for tc in testClasses {
+            ;; Verifica que cada argumento sea un objeto (clase válida)
+            if !IsObject(tc)
+                throw TargetError("Se esperaba una clase válida pero se encontró: " Type(tc), -1)
+        }
+
         failFast := DUnit._config.FailFast
         verbose := DUnit._config.Verbose
 
-        totalFails := 0, totalSuccesses := 0, startTime := A_TickCount
-
-        ;; Contadores para los métodos `Test_*` de la clase
-        totalTests := 0
+        totalFails := 0, totalSuccesses := 0, totalTests := 0, startTime := A_TickCount
+        ctSuccesses := [], ctErrors := [], ctNotEvaluated := [], ctTotal := []
 
         ;; Imprime la línea de separación inicial
         Print("", "")
         Print("========================", "")
 
+        for tc in testClasses
+            (IsObject(tc)) && ctTotal.Push(Type(tc()))
         for testClass in testClasses {
-            if !IsObject(testClass) {
+            if !IsObject(testClass)
                 continue
-            }
 
             instance := testClass()
             className := Type(instance)
+
             Print("============", "")
             Print("Iniciando pruebas en la clase: " className, "-")
 
             ;; Llamar al método Init si está definido
-            if instance.base.HasOwnProp("Init") {
-                instance.Init()
-            }
+            instance.base.HasOwnProp("Init") && instance.Init()
 
             classFails := 0, classSuccesses := 0  ;; Contadores para éxitos y fallos por clase
 
@@ -206,9 +224,7 @@ class DUnit {
                     methodName := test
 
                     ;; Llamar al método InitTest si está definido
-                    if instance.base.HasOwnProp("InitTest") {
-                        instance.InitTest()
-                    }
+                    instance.base.HasOwnProp("InitTest") && instance.InitTest()
 
                     try {
                         instance.%test%()
@@ -224,19 +240,21 @@ class DUnit {
                     }
 
                     ;; Llamar al método EndTest si está definido
-                    if instance.base.HasOwnProp("EndTest") {
-                        instance.EndTest()
-                    }
+                    instance.base.HasOwnProp("EndTest") && instance.EndTest()
                 }
             }
 
             ;; Llamar al método End si está definido
-            if instance.base.HasOwnProp("End") {
-                instance.End()
-            }
+            instance.base.HasOwnProp("End") && instance.End()
 
             ;; Imprime los resultados por clase
             Print("Resultados para la clase " className ": " classSuccesses " successes, " classFails " errors.", "-")
+
+            if classFails > 0
+                ctErrors.Push(className)
+            else
+                ctSuccesses.Push(className)
+
             totalFails += classFails  ;; Acumula los fallos de la clase en el total
             totalSuccesses += classSuccesses  ;; Acumula los éxitos de la clase en el total
 
@@ -247,6 +265,13 @@ class DUnit {
         ;; Imprime los resultados totales
         elapsedTime := (A_TickCount - startTime)
         elapsedTimeS := Round(elapsedTime / 1000, 3)
+
+        ;; Añade las clases que no fueron evaluadas
+        for v in ctTotal {
+            if (!ctErrors.IndexOf(v)) && (!ctSuccesses.IndexOf(v)) {
+                ctNotEvaluated.Push(v)
+            }
+        }
 
         Print("============", "")
         Print("========================", "")
@@ -259,13 +284,31 @@ class DUnit {
         if totalFails == totalTests {
             Print("Resumen: Todas las pruebas fallaron.", "# Fail")
         } else if totalFails > 0 {
-            Print("Resumen: Algunas pruebas fallaron.", "# Warning")
+            Print("Resumen: Algunas pruebas fallaron en (" Print(ctErrors, "null") ").", "# Warning")
         } else {
             Print("Resumen: Todas las pruebas pasaron con éxito.", "# Success")
         }
 
+        if verbose {
+            Print("Resumen Clases de prueba:", "")
+            if (ctSuccesses.Length > 0)
+                Print(" " Print(ctSuccesses, "null"), "Success")
+            if (ctErrors.Length > 0)
+                Print("    " Print(ctErrors, "null"), "Fail")
+            if (ctNotEvaluated.Length > 0)
+                Print(" " Print(ctNotEvaluated, "null"), "Warning")
+            Print("total: " Print(ctTotal, "null"), "-")
+        }
+
         return { opc: { failFast: failFast, verbose: verbose },
-            total: totalTests, successes: totalSuccesses, errors: totalFails, time: elapsedTime }
+            total: totalTests, successes: totalSuccesses, errors: totalFails, time: elapsedTime,
+            classTests: {
+                successes: ctSuccesses,
+                errors: ctErrors,
+                notEvaluated: ctNotEvaluated,
+                total: ctTotal
+            }
+        }
     }
 
 

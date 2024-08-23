@@ -25,19 +25,21 @@
 
 
 RunTests() {
-    DUnit.SetOptions("+F")
+    DUnit.SetOptions("+V +F")
     if DUnit.RunTests(DUnitTestSuite).errors
         return 1 ;; Aborted
 
 
-    DUnit.SetOptions("-F")
+    DUnit.SetOptions("+V -F")
     if DUnit.RunTests(MiscTestSuite).errors
         return 1 ;; Aborted
 
 
+    DUnit.SetOptions("+V -F")
     DUnit.RunTests(ArrayTestSuite, MapTestSuite, StringTestSuite)
 
-    DUnit.SetOptions("+V")
+
+    DUnit.SetOptions("+V -F")
     DUnit.RunTests(TimerTestSuite)
 }
 
