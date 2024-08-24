@@ -1,4 +1,4 @@
-#include "../Lib/Misc/Misc.ahk"
+; #include "../Lib/Misc/Misc.ahk" ;; Ya se importa en el archivo DUnit.ahk
 
 class MiscTestSuite {
 

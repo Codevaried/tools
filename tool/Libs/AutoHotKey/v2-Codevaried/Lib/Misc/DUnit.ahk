@@ -1,14 +1,14 @@
-#Include "../Misc/Misc.ahk"
+#Include "../Misc/Misc.ahk" ;; Solo para la funcion `Print`
 
 /**
  * @file DUnit.ahk
- * @version 0.7 (23.08.24)
+ * @version 0.8 (24.08.24)
  * @created 18.08.24
  * @author Codevaried
  * @description
- * Esta biblioteca proporciona funciones para realizar pruebas unitarias en AHK v2.
+ * Esta biblioteca proporciona un marco para realizar pruebas unitarias en AutoHotkey v2.
  * 
- * Funciones incluidas:
+ * ==Funciones Principales==
  * - DUnit.Assert: Verifica una condición y lanza un error si es falsa.
  * - DUnit.True: Verifica si la condición dada es verdadera.
  * - DUnit.False: Verifica si la condición dada es falsa.
@@ -18,10 +18,14 @@
  * - DUnit.Throws: Verifica si una función lanza un error y opcionalmente verifica el tipo de error.
  *   Si la función es un método de instancia, se debe vincular a `this` y a los parámetros usando `Bind`.
  * 
+ * ==Funciones de Configuración==
+ * - DUnit.SetOptions: Configura las opciones de prueba (`Verbose` y `FailFast`).
+ *   Permite establecer o alternar entre diferentes opciones utilizando prefijos específicos.
  * - DUnit.RunTests: Ejecuta todos los métodos de prueba en clases dadas que comienzan con "Test_".
  *   También maneja métodos opcionales como `Init` y `End` para inicialización y limpieza.
  *   Se pueden configurar opciones como `Verbose` para detalles adicionales y `FailFast` para detenerse en la primera falla.
  * 
+ * ==Detalles Adicionales==
  * @credit
  * * Descolada - Autor original de la librería en la que se basa esta versión modificada.
  * 
@@ -74,6 +78,8 @@ class DUnit {
      * Se pueden usar los prefijos `+` o `-` para establecer el valor a `true` o `false`, respectivamente. 
      * Si no se proporciona un prefijo, la opción alternará entre `true` y `false` según su estado actual.
      * 
+     * @throws {TypeError|ValueError} Si `options` no es una cadena o contiene valores no válidos.
+     * 
      * @example
      * DUnit.SetOptions("-F")  ; Establece FailFast en false
      * DUnit.SetOptions("+F")  ; Establece FailFast en true
@@ -83,21 +89,22 @@ class DUnit {
      */
     static SetOptions(options?) {
         if IsSet(options) {
+            if (Type(options) != "String")
+                throw TypeError("Se esperaba una cadena en el parámetro 'options', pero se recibió: " Type(options))
+
             for option in StrSplit(options, " ") {
-                Switch SubStr(option, 1, 1) {
-                    case "+":
-                        Switch SubStr(option, 2) {
+                prefijo := SubStr(option, 1, 1)
+                valor := SubStr(option, 2)
+
+                Switch prefijo {
+                    case "+", "-":
+                        Switch valor {
                             case "V", "Verbose":
-                                DUnit._config.Verbose := true
+                                DUnit._config.Verbose := (prefijo = "+")
                             case "F", "FailFast":
-                                DUnit._config.FailFast := true
-                        }
-                    case "-":
-                        Switch SubStr(option, 2) {
-                            case "V", "Verbose":
-                                DUnit._config.Verbose := false
-                            case "F", "FailFast":
-                                DUnit._config.FailFast := false
+                                DUnit._config.FailFast := (prefijo = "+")
+                            default:
+                                throw ValueError("Opción desconocida: " option)
                         }
                     default:
                         Switch option {
@@ -105,6 +112,8 @@ class DUnit {
                                 DUnit._config.Verbose := !DUnit._config.Verbose
                             case "F", "FailFast":
                                 DUnit._config.FailFast := !DUnit._config.FailFast
+                            default:
+                                throw ValueError("Opción desconocida: " option)
                         }
                 }
             }
@@ -146,7 +155,7 @@ class DUnit {
      *   - `notEvaluated` {Array}: Lista de nombres de las clases que no se evaluaron (debido a `failFast`).
      *   - `total` {Array}: Lista completa de todas las clases proporcionadas para la prueba.
      * 
-     * @throws {TypeError} Si algún argumento proporcionado no es una clase válida o si no se proporcionan clases.
+     * @throws {ValueError|TargetError} Si algún argumento proporcionado no es una clase válida o si no se proporcionan clases.
      * 
      * @example
      * class MyTests {
