@@ -6,6 +6,7 @@
 
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
+; #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Misc/Misc.ahk"
 
 
 /**
@@ -35,7 +36,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.3",
+    version: "v2.4",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -329,6 +330,8 @@ getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) 
     ignoreDirs := ignoreFiles
     ignoreDirs.Filter(DirExist)
 
+    ; Print(ignoreDirs, , MsgBox)
+
     ;; Iterar sobre todos los archivos y subdirectorios
     Loop Files, dirPath "\*", "FR" {
         ;; Obtener la ruta completa del archivo actual
@@ -340,26 +343,41 @@ getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) 
             continue
         }
 
+        ingnore := false
         ;; Verificar si el archivo actual está dentro de algún directorio a ignorar
         for dir in ignoreDirs {
-            if (filePath.Find(dir "\")) {
-                continue
+            if dir !== "" {
+                if (filePath.Find(dir "\")) {
+                    ; Print("filePath: '" filePath "'", "-")
+                    ; Print("filePath: '" filePath.SplitPath().FileName "'", "-")
+                    ; Print("'" dir "'", "#")
+                    ; Print(filePath.Find(dir "\"), "#")
+                    ingnore := true
+                    break
+                }
             }
         }
+        if ingnore
+            continue
 
         ;; Verificar si la extensión del archivo está permitida, si se proporciona allowedExtensions
         if (allowedExtensions.Length > 0 && !allowedExtensions.HasValue(fileExtension)) {
             continue
         }
 
+        ; Print("filePath: '" filePath "'", "Success")
+        ; Print("filePath: '" filePath.SplitPath().FileName "'", "Success")
+
+        ; Print(totalSize " + " A_LoopFileSize " = " totalSize + A_LoopFileSize, "")
         totalSize += A_LoopFileSize
 
         ;; Verificar si el tamaño supera el máximo permitido, si se proporciona maxSize
         if (IsSet(maxSize) && totalSize > maxSize) {
+            ; Print("(" totalSize - maxSize "b) De Más", "# Fail")
             return -1
         }
     }
-
+    ; Print("(" totalSize "b) en Total", "# Success")
     return totalSize
 }
 
@@ -665,6 +683,11 @@ processFolder(folderPath) {
         endGeneration()
         return
     }
+
+    ; if true {
+    ;     endGeneration()
+    ;     return
+    ; }
 
     ;; Generar el árbol de directorios
     if (checkAndGenerateDirectoryTree()) {
