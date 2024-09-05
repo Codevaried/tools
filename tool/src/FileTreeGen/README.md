@@ -1,4 +1,4 @@
-## Índice de la Documentación de FileTreeGen v2.4
+## Índice de la Documentación de FileTreeGen v2.5
 
 - [Introducción](#introducción)
 - [Funcionalidades Principales](#funcionalidades-principales)
@@ -13,7 +13,7 @@
 
 ### Introducción
 
-**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.4**.
+**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.5**.
 
 ### Funcionalidades Principales
 

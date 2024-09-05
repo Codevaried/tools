@@ -6,7 +6,7 @@
 
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
-; #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Misc/Misc.ahk"
+#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Misc/Misc.ahk"
 
 
 /**
@@ -36,7 +36,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.4",
+    version: "v2.5",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -112,11 +112,20 @@ SetKeyDelay -1, -1
 
 ;todo---MARK: GUI Management
 
+
+;
+;
+;
+
+
+;;MARK:*
+;^----------------Create----------------^;
+
 /**
  * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 createGui() {
-    global PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, generateText
+    global PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, statusProcess, configButton
     myGui := Gui("+AlwaysOnTop", PROGRAM.fullDescription)
     myGui.SetFont("s10", "Segoe UI")
 
@@ -126,16 +135,20 @@ createGui() {
     folderButton := myGui.Add("Button", "xp+263 y+5", "Seleccionar Carpeta")
 
     ;; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
-    generateText := myGui.Add("Text", "xm yp+10 w100 h23 vGenerateText", "Generate:").SetFont("s12", "Segoe UI")
+    statusProcess := myGui.Add("Text", "xm yp+10 w250 h23 vStatusProcess", "Generate:").SetFont("s12", "Segoe UI")
 
     ;; Añadir CheckBoxes en línea y activarlos por defecto
     directoryTreeCheckbox := myGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
     fileContentsCheckbox := myGui.Add("CheckBox", "x+10 Checked", "Files Contents")
 
+    ;; Añadir botón de configuración en la esquina inferior derecha
+    configButton := myGui.Add("Button", "xm+366 ym+90", "⚙️")
+
     ;; Configurar eventos de botones y checkboxes
     folderButton.OnEvent("Click", selectFolder)
     directoryTreeCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(directoryTreeCheckbox))
     fileContentsCheckbox.OnEvent("Click", (*) => ensureOneCheckboxChecked(fileContentsCheckbox))
+    configButton.OnEvent("Click", openConfig)
 
     ;; Configurar evento de arrastre
     myGui.OnEvent("DropFiles", guiDropFiles)
@@ -149,6 +162,10 @@ createGui() {
     ;; Mostrar la GUI centrada
     myGui.Show("AutoSize Center")
 }
+
+
+;;MARK:*
+;^----------------Functions----------------^;
 
 /**
  * * Maneja el cierre del programa.
@@ -185,7 +202,6 @@ selectFolder(*) {
 
     processFolder(folderPath)
 }
-
 /**
  * * Subrutina que establece el diálogo como siempre en la parte superior.
  */
@@ -193,6 +209,24 @@ MakeTopmost(*) {
     hwnd := WinExist("Seleccione una carpeta ahk_class #32770")
     if hwnd {
         DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_TOPMOST = -1, SWP_NOMOVE = 0x0002, SWP_NOSIZE = 0x0001
+    }
+}
+
+/**
+ * * Abre la ubicación del archivo de configuración en el Explorador.
+ */
+openConfig(*) {
+    if !checkFileConfi() {
+
+        try {
+            ;; Abre el Explorador de Windows en la ubicación del archivo
+            Run('explorer.exe /select,"' confiFileTreeGen '"', , "UseErrorLevel")
+            if A_LastError
+                throw
+
+        } catch {
+            showTopMsgBox("No se pudo abrir el archivo de configuración en el Explorador. Verifica que tienes los permisos necesarios o que el sistema no tenga restricciones para abrir el Explorador.", "Error al Abrir Archivo", "Error")
+        }
     }
 }
 
@@ -222,6 +256,38 @@ WM_KeyDown(wParam, lParam, msg, hwnd) {
         if (WinActive(PROGRAM.fullDescription)) {
             processFolder(folderEdit.Value)
         }
+    }
+}
+
+
+;;MARK:*
+;^----------------Other Functions----------------^;
+
+/**
+ * * Actualiza el texto de un control específico en la GUI.
+ * @param {string} controlName - El nombre del control en la GUI que se va a actualizar.
+ * @param {string} newText - El nuevo texto que se establecerá en el control.
+ */
+updateGuiControlText(controlName, newText) {
+    global myGui
+
+    ;; Validar que el nombre del control no esté vacío
+    if (controlName == "") {
+        throw Error("El nombre del control no puede estar vacío.", -1)
+    }
+
+    ;; Intentar acceder al control para verificar su existencia
+    try {
+        control := myGui[controlName]  ; Intentar obtener el control
+    } catch {
+        throw Error("El control especificado no existe en la GUI: '" controlName "'", -1)
+    }
+
+    ;; Actualizar el valor del control con el nuevo texto
+    try {
+        control.Value := newText
+    } catch {
+        throw Error("No se pudo actualizar el texto del control: '" controlName "'", -1)
     }
 }
 
@@ -366,18 +432,18 @@ getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) 
         }
 
         ; Print("filePath: '" filePath "'", "Success")
-        ; Print("filePath: '" filePath.SplitPath().FileName "'", "Success")
+        Print("filePath: '" filePath.SplitPath().FileName "'", "Success")
 
-        ; Print(totalSize " + " A_LoopFileSize " = " totalSize + A_LoopFileSize, "")
+        Print(totalSize " + " A_LoopFileSize " = " totalSize + A_LoopFileSize, "")
         totalSize += A_LoopFileSize
 
         ;; Verificar si el tamaño supera el máximo permitido, si se proporciona maxSize
         if (IsSet(maxSize) && totalSize > maxSize) {
-            ; Print("(" totalSize - maxSize "b) De Más", "# Fail")
+            Print("(" totalSize - maxSize "b) De Más", "# Fail")
             return -1
         }
     }
-    ; Print("(" totalSize "b) en Total", "# Success")
+    Print("(" totalSize "b) en Total", "# Success")
     return totalSize
 }
 
@@ -481,6 +547,15 @@ RunPowerShellCommand(command, tempFolderPath := A_Temp) {
 
 ;;MARK:*
 ;^----------------Files----------------^;
+
+checkFileConfi() {
+    if (!FileExist(confiFileTreeGen)) {
+        message := "El archivo requerido '" confiFileTreeGen "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene datos válidos, uno por línea, sin comentarios o espacios en blanco."
+        showTopMsgBox(message, "Archivo Requerido No Encontrado", "Error")
+        return true
+    }
+    return false
+}
 
 /**
  * * Valida si una ruta es una carpeta válida.
@@ -599,7 +674,7 @@ parseArrayContent(lineContent, data) {
  */
 checkIfGenerating() {
     if (isGenerating) {
-        showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
+        ; showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
         return true
     }
 }
@@ -609,6 +684,7 @@ checkIfGenerating() {
  */
 checkAndGenerateDirectoryTree() {
     if (directoryTreeCheckbox.Value) {
+        updateGuiControlText("StatusProcess", "Generating DirectoryTree...")
         return generateDirectoryTree()
     }
 }
@@ -618,6 +694,7 @@ checkAndGenerateDirectoryTree() {
  */
 checkAndGenerateFilesContents() {
     if (fileContentsCheckbox.Value) {
+        updateGuiControlText("StatusProcess", "Generating FilesContents...")
         return generateFilesContents()
     }
 }
@@ -629,13 +706,8 @@ checkAndGenerateFilesContents() {
  * * Inicializa el script verificando la existencia de archivos requeridos y creando la GUI.
  */
 init() {
-    fileConfi := confiFileTreeGen
-
-    if (!FileExist(fileConfi)) {
-        message := "El archivo requerido '" fileConfi "' no existe. Por favor, asegúrese de que el archivo está presente en el directorio adecuado y contiene datos válidos, uno por línea, sin comentarios o espacios en blanco."
-        showTopMsgBox(message, "Archivo Requerido No Encontrado", "Error")
+    if checkFileConfi()
         ExitApp(1)
-    }
 
     ;; Inicializar la GUI
     createGui()
@@ -646,7 +718,7 @@ init() {
  * @param {string} folderPath - La ruta de la carpeta.
  */
 processFolder(folderPath) {
-    global mainFolderPath, isGenerating, myGui, folderEdit
+    global mainFolderPath, isGenerating, folderEdit
 
     if (folderPath == "")
         return
@@ -669,7 +741,7 @@ processFolder(folderPath) {
     }
 
     isGenerating := true
-    myGui["GenerateText"].Value := "Generating..."  ;; Cambia el texto a "Generating..."
+    updateGuiControlText("StatusProcess", "Analyzing Files...")
 
     mainFolderPath := folderPath.path
 
@@ -683,6 +755,8 @@ processFolder(folderPath) {
         endGeneration()
         return
     }
+
+    updateGuiControlText("StatusProcess", "Generating...")
 
     ; if true {
     ;     endGeneration()
@@ -710,10 +784,10 @@ processFolder(folderPath) {
  * * Finaliza el proceso de generación limpiando archivos temporales y estableciendo la bandera de generación.
  */
 endGeneration() {
-    global isGenerating, myGui
+    global isGenerating
     clearTemp()
     isGenerating := false
-    myGui["GenerateText"].Value := "Generate:"  ;; Cambia el texto de vuelta a "Generate:"
+    updateGuiControlText("StatusProcess", "Generate:") ;; Cambia el texto de vuelta a "Generate:"
 }
 
 
@@ -756,6 +830,7 @@ getIgnoredFiles(section, extendAllDefault?) {
     newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
+        Print("index: " index "   item: " item, "-")
 
         cleanItem := normalizePath(item, mainFolderPath)
         ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem.path)
