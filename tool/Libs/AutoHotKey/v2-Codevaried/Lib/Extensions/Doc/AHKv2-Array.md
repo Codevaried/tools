@@ -1,4 +1,4 @@
-# Documentación de la Librería `_Array`
+# Documentación de la Librería `_Array` (NO COMPLETA)
 
 Estos métodos no pueden ser usados de forma independiente. Para hacerlo, debe agregar otro argumento 'array' a la función y reemplazar todas las ocurrencias de 'this' con 'array'.
 

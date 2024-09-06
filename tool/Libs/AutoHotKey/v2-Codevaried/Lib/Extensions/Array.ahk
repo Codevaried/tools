@@ -22,6 +22,19 @@ class _Array extends Array {
 	;
 
 
+	static Last {
+		get {
+			try {
+				value := this[this.Length]
+
+			} catch {
+				value := ""
+			}
+			return value
+		}
+	}
+
+
 	;;MARK:*
 	;? Section: Basic Operations
 
@@ -636,3 +649,11 @@ class ArrayUtiles {
 ;  */
 ; shuffledRisingArray := ArrayUtiles.GenerateShuffled(10)
 ; MsgBox("Method: GenerateShuffled`nResult: " shuffledRisingArray.Join(), "Array Generation")
+
+
+; /**
+;  * Ejemplo de uso de la clase _Array con métodos personalizados
+;  */
+; myArray := [1, 2, 3]
+
+; MsgBox(myArray.Last)

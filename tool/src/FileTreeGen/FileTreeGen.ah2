@@ -6,7 +6,10 @@
 
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/Array.ahk"
 #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Extensions/String.ahk"
-#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Misc/Misc.ahk"
+
+#Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Tools/Timer.ahk"
+
+; #Include "../../Libs/AutoHotKey/v2-Codevaried/Lib/Misc/Misc.ahk"
 
 
 /**
@@ -36,7 +39,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.5",
+    version: "v2.6",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -75,6 +78,10 @@ global tempFiles := {
     file_filesContents: tempMainDir "\filesContents_output.tmp", ;; Archivo temporal para los contenidos de archivos
     output: "output.md"                                          ;; Archivo de salida combinado
 }
+
+
+global lastProcessTimer := Timer()
+
 
 /**
  * ; Bandera para evitar ejecuciones concurrentes.
@@ -125,8 +132,10 @@ SetKeyDelay -1, -1
  * * Crear una GUI para generar un árbol de archivos de un directorio arrastrado.
  */
 createGui() {
-    global PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, statusProcess, configButton
+    global PROGRAM, myGui, folderEdit, folderButton, directoryTreeCheckbox, fileContentsCheckbox, statusProcess, configButton, progressBar, progressText
+
     myGui := Gui("+AlwaysOnTop", PROGRAM.fullDescription)
+    myGui.BackColor := "0xe7e7e7"
     myGui.SetFont("s10", "Segoe UI")
 
     ;; Añadir controles a la GUI
@@ -135,7 +144,7 @@ createGui() {
     folderButton := myGui.Add("Button", "xp+263 y+5", "Seleccionar Carpeta")
 
     ;; Añadir texto "Generate:" con tamaño más grande y ajustar su posición y ancho
-    statusProcess := myGui.Add("Text", "xm yp+10 w250 h23 vStatusProcess", "Generate:").SetFont("s12", "Segoe UI")
+    statusProcess := myGui.Add("Text", "xm yp+10 w250 h23 c000000 +BackgroundTrans vStatusProcess", "Generate:").SetFont("s12", "Segoe UI")
 
     ;; Añadir CheckBoxes en línea y activarlos por defecto
     directoryTreeCheckbox := myGui.Add("CheckBox", "xm y+5 Checked", "Directory Tree")
@@ -143,6 +152,11 @@ createGui() {
 
     ;; Añadir botón de configuración en la esquina inferior derecha
     configButton := myGui.Add("Button", "xm+366 ym+90", "⚙️")
+
+    ;; Añadir barra de progreso
+    progressBar := myGui.Add("Progress", "xm ym+130 w400 h25 c48ce00", 0)  ; Barra de progreso inicializada en 0
+    progressText := myGui.Add("Text", "xm ym+132 w400 h25 Center c000000 +BackgroundTrans", "")
+    progressText.SetFont("s9", "Segoe UI")  ; Ajustar el tamaño de la fuente a 8 puntos
 
     ;; Configurar eventos de botones y checkboxes
     folderButton.OnEvent("Click", selectFolder)
@@ -163,6 +177,101 @@ createGui() {
     myGui.Show("AutoSize Center")
 }
 
+/**
+ * * Actualiza la barra de progreso en la GUI con información adicional.
+ * 
+ * Esta función actualiza el progreso visual y el texto de estado en la interfaz gráfica de usuario. Puede manejar
+ * diferentes estados, como progreso normal, finalización exitosa, o errores, y permite personalizar el color de la
+ * barra de progreso y los mensajes mostrados.
+ * 
+ * @param {integer} progressValue - Valor entre 0 y 100 que representa el progreso. Si es -1, no actualiza el valor de la barra.
+ * @param {string} statusMessage - Mensaje adicional para mostrar junto al progreso o para estados como error o éxito (opcional).
+ * @param {integer} itemsProcessed - Número de elementos procesados hasta el momento (opcional).
+ * @param {integer} itemsTotal - Número total de elementos a procesar (opcional).
+ * @param {boolean} error - Indica si hubo un error en el proceso. Si es true, se muestra el mensaje de error y cambia el color de la barra a rojo (opcional).
+ * @param {integer} progressBarColorCode - Código de color para la barra de progreso:
+ *                                          0 (Normal - verde claro por defecto),
+ *                                          1 (Verde - completado),
+ *                                          2 (Rojo - error),
+ *                                          3 (Amarillo - advertencia),
+ *                                          4 (Azul - proceso alternativo).
+ */
+updateProgressBar(progressValue := -1, statusMessage := "", itemsProcessed := "", itemsTotal := "", error := false, progressBarColorCode := 0) {
+    global progressBar, progressText
+
+    ;; Definir colores predefinidos para la barra de progreso
+    colorMap := { 0: "c48ce00", 1: "c00FF00", 2: "cff4a4a", 3: "cFFFF00", 4: "c87CEEB" }
+
+    ;; Validar y ajustar el valor de progreso
+    if (progressValue > 100) {
+        progressValue := 100
+    } else if (progressValue < 0) {
+        progressValue := -1  ;; Mantener -1 si no debe actualizar la barra
+    }
+
+    ;; Determinar el color de la barra de progreso basado en el estado y el código de color proporcionado
+    if (error && progressBarColorCode == 0) {
+        progressBarColorCode := 2  ;; Color rojo para errores
+    }
+
+    ;; Configurar el color de la barra de progreso si se ha proporcionado o determinado
+    if (colorMap.HasOwnProp(progressBarColorCode)) {
+        progressBar.Opt("+" colorMap.%progressBarColorCode%)
+    } else {
+        progressBar.Opt("+c" progressBarColorCode)
+    }
+
+    ;; Actualizar el valor de la barra de progreso solo si es mayor o igual a 0
+    if (progressValue >= 0)
+        progressBar.Value := progressValue
+
+    ;; Crear un texto detallado para mostrar basado en el estado
+    infoText := error ? "Error: " statusMessage : (progressValue == 100 ? statusMessage : "Progreso: " progressBar.Value "%")
+
+    ;; Añadir mensaje adicional si está presente y el estado es en progreso
+    if (statusMessage != "" && !error && progressValue < 100) {
+        infoText .= " - " statusMessage
+    }
+
+    ;; Añadir información de elementos procesados si se proporciona
+    if (!error && itemsProcessed != "" && itemsTotal != "") {
+        infoText .= " (" itemsProcessed " de " itemsTotal " elementos)"
+    }
+
+    ;; Actualizar el texto de progreso con la información detallada
+    progressText.Value := infoText
+}
+
+
+/**
+ * * Ejemplo de uso de la barra de progreso con múltiples procesos.
+ * Este método simula varios procesos, algunos completándose con éxito y otros fallando.
+ */
+exampleUsageProgressBar() {
+    ;; Simulación del primer proceso (completado con éxito)
+    Loop 50 {  ;; Simulación de un proceso que se completa exitosamente.
+        updateProgressBar(A_Index * 2, "Leyendo archivos", A_Index, 50)  ;; Progreso normal.
+        Sleep(30)  ;; Simula el tiempo de procesamiento.
+    }
+    updateProgressBar(, "Archivos leídos correctamente.", "", "", false, 1)  ;; Proceso completado sin errores con mensaje personalizado.
+    Sleep(2000)  ;; Pausa para mostrar que el proceso se ha completado.
+
+    ;; Simulación del segundo proceso (fallo)
+    Loop 28 {  ;; Simulación de un proceso que termina con un error.
+        updateProgressBar(A_Index * 2.1, "Procesando datos", A_Index, 50)  ;; Progreso normal.
+        Sleep(50)  ;; Simula el tiempo de procesamiento.
+    }
+    updateProgressBar(, "Se produjo un error durante el procesamiento de datos.", "", "", true)  ;; Proceso con error.
+    Sleep(2000)  ;; Pausa para mostrar el mensaje de error.
+
+    ;; Simulación del tercer proceso (completado con éxito)
+    Loop 50 {  ;; Simulación de otro proceso que se completa exitosamente.
+        updateProgressBar(A_Index, "Verificando integridad", , , , 4)  ;; Progreso normal.
+        Sleep(40)  ;; Simula el tiempo de procesamiento.
+    }
+    updateProgressBar(, "Verificando integridad en pausa", "", "", false, 3)  ;; Proceso completado sin errores con mensaje personalizado.
+}
+
 
 ;;MARK:*
 ;^----------------Functions----------------^;
@@ -179,6 +288,10 @@ closeProgram(*) {
  * * Asegura que al menos uno de los checkboxes esté activado.
  */
 ensureOneCheckboxChecked(checkbox) {
+    if (checkIfGenerating()) {
+        checkbox.Value := !checkbox.Value
+        return
+    }
     if (!directoryTreeCheckbox.Value && !fileContentsCheckbox.Value) {
         checkbox.Value := true
     }
@@ -221,6 +334,7 @@ openConfig(*) {
         try {
             ;; Abre el Explorador de Windows en la ubicación del archivo
             Run('explorer.exe /select,"' confiFileTreeGen '"', , "UseErrorLevel")
+            Sleep(1000)
             if A_LastError
                 throw
 
@@ -432,18 +546,19 @@ getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) 
         }
 
         ; Print("filePath: '" filePath "'", "Success")
-        Print("filePath: '" filePath.SplitPath().FileName "'", "Success")
+        ; Print("filePath: '" filePath.SplitPath().FileName "'", "Success")
 
-        Print(totalSize " + " A_LoopFileSize " = " totalSize + A_LoopFileSize, "")
+        ; Print(totalSize " + " A_LoopFileSize " = " totalSize + A_LoopFileSize, "")
         totalSize += A_LoopFileSize
 
         ;; Verificar si el tamaño supera el máximo permitido, si se proporciona maxSize
         if (IsSet(maxSize) && totalSize > maxSize) {
-            Print("(" totalSize - maxSize "b) De Más", "# Fail")
+            ; Print("(" totalSize - maxSize "b) De Más", "# Fail")
+            updateProgressBar(, "Tamaño excedido, el Limite son " maxSize "b", , , true)
             return -1
         }
     }
-    Print("(" totalSize "b) en Total", "# Success")
+    ; Print("(" totalSize "b) en Total", "# Success")
     return totalSize
 }
 
@@ -674,6 +789,7 @@ parseArrayContent(lineContent, data) {
  */
 checkIfGenerating() {
     if (isGenerating) {
+        SoundPlay("*-1")
         ; showTopMsgBox("El proceso de generación del árbol aún está en curso. Por favor, espere.", "Proceso de Generación en Curso", "Warning", true)
         return true
     }
@@ -711,6 +827,7 @@ init() {
 
     ;; Inicializar la GUI
     createGui()
+    ; exampleUsageProgressBar()
 }
 
 /**
@@ -722,10 +839,11 @@ processFolder(folderPath) {
 
     if (folderPath == "")
         return
-
-    if (checkIfGenerating()) {
+    if (checkIfGenerating())
         return
-    }
+    if checkFileConfi()
+        return
+
 
     ;; Normalizar la ruta
     folderPath := normalizePath(folderPath)
@@ -741,6 +859,7 @@ processFolder(folderPath) {
     }
 
     isGenerating := true
+    lastProcessTimer.Start()
     updateGuiControlText("StatusProcess", "Analyzing Files...")
 
     mainFolderPath := folderPath.path
@@ -830,7 +949,13 @@ getIgnoredFiles(section, extendAllDefault?) {
     newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
-        Print("index: " index "   item: " item, "-")
+        ; Print("index: " index ", item: " item, "#")
+        updateProgressBar(index * 100 / ignoredFiles.Length, "Procesando: '" item "'", index, ignoredFiles.Length)
+        ; Print(ignoredFiles, "")
+        ; Print(newIgnoredFiles, "-")
+        ; Print(newIgnoredFiles.Last, "-")
+        ; Print(newIgnoredFiles.Last.Split("\"), "-")
+        ; Print(newIgnoredFiles.Last.Split("\").Last, "-")
 
         cleanItem := normalizePath(item, mainFolderPath)
         ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem.path)
@@ -874,11 +999,17 @@ getIgnoredFiles(section, extendAllDefault?) {
 createDir_filesTree(allowedExtensions, ignoredFiles) {
     tempFolderPath := tempFiles.dir_filesTree
 
+    updateProgressBar(0, "Inicializando Copia...")
+
     ;; Crear una copia temporal del directorio principal con solo los archivos permitidos
     DirCreate(tempFolderPath)
 
+    updateProgressBar(10, "Copiando Directorio Temporal")
+
     ignoreDirs := ignoredFiles
-    ignoreDirs.Filter(DirExist) ;; Filtramos por directorios que existan
+    ignoreDirs.Filter(DirExist)  ;; Filtrar solo directorios que existan
+
+    updateProgressBar(20, "Filtrando y copiando archivos")
 
     Loop Files, mainFolderPath "\*.*", "R" {
         relativePath := StrReplace(A_LoopFileFullPath, mainFolderPath "\")
@@ -907,6 +1038,8 @@ createDir_filesTree(allowedExtensions, ignoredFiles) {
             FileCopy(A_LoopFileFullPath, destPath)
         }
     }
+    ;; Finalizar barra de progreso
+    updateProgressBar(100, "Copia Realizada")
 }
 
 
@@ -1088,6 +1221,10 @@ mergeFiles() {
         return
     }
 
+    lastProcessTimer.Stop()
+    updateProgressBar(100, "Proceso Completado en: " lastProcessTimer.ElapsedTime["ms"] "ms", , , , 1)
+    ; updateProgressBar(100, "Proceso Completado en: " lastProcessTimer.GetElapsedTimeRounded("ms"), , , , 1)
+    lastProcessTimer.Reset()
     showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
