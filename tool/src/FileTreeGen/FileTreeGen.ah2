@@ -39,7 +39,7 @@
  */
 global PROGRAM := {
     name: "FileTreeGen",
-    version: "v2.6",
+    version: "v2.7",
     description: "File Tree Generation",
     fullDescription: ""
 }
@@ -105,13 +105,13 @@ SetKeyDelay -1, -1
 #HotIf !A_IsCompiled
 ^s:: {
     Send("^s")  ;; Simula Ctrl+S para guardar el archivo
-    clearTemp() ;; Elimina todos los posibles archivos residuales.
+    endGeneration() ;; Finaliza la generacion y elimina todos los posibles archivos residuales.
     Sleep(100)  ;; Pequeño retraso para asegurar que el archivo se guarde
     Reload()    ;; Recarga el script
 }
 
 ^Esc:: {
-    clearTemp()
+    endGeneration()
     ExitApp(1)
 }
 #HotIf
@@ -280,7 +280,7 @@ exampleUsageProgressBar() {
  * * Maneja el cierre del programa.
  */
 closeProgram(*) {
-    clearTemp()
+    endGeneration()
     ExitApp(0)
 }
 
@@ -553,12 +553,11 @@ getDirectorySize(dirPath, maxSize?, ignoreFiles := [], allowedExtensions := []) 
 
         ;; Verificar si el tamaño supera el máximo permitido, si se proporciona maxSize
         if (IsSet(maxSize) && totalSize > maxSize) {
-            ; Print("(" totalSize - maxSize "b) De Más", "# Fail")
-            updateProgressBar(, "Tamaño excedido, el Limite son " maxSize "b", , , true)
+            ; Print("(" totalSize - maxSize "bytes) De Más", "# Fail")
             return -1
         }
     }
-    ; Print("(" totalSize "b) en Total", "# Success")
+    ; Print("(" totalSize "bytes) en Total", "# Success")
     return totalSize
 }
 
@@ -866,47 +865,116 @@ processFolder(folderPath) {
 
 
     allowedExtensions := getAllowedExtensions("AllDefault", false)
+    switch allowedExtensions {
+        case 1:
+            showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" confiFileTreeGen "' existe y contiene el array de las extensiones permitidas 'allowed_extensions'", "No se Encontraron Extensiones Permitidas", "Error", true)
+            endGeneration("No se encontro ninguna extension de archivo", -1)
+            return 1
+    }
+
     ignoreFiles := getIgnoredFiles("AllDefault", false)
 
+
+    maxSize := 3670016  ;; Tamaño en bytes para 3.5 Megabytes
+    maxSizeMB := Round(maxSize / (1024 * 1024), 2)  ;; Convertir a MB y redondear a 2 decimales
     ;; Se comprueba que folderPath.path no supere los 3.5 Megabytes
-    if (getDirectorySize(folderPath.path, 3500000, ignoreFiles, allowedExtensions) == -1) {
-        showTopMsgBox("Los archivos para procesar superan los 3.5 MB y no se procederá. Para solucionar esto, seleccione un directorio más pequeño o edite en el archivo de configuración los archivos que se procesarán.", "Tamaño del Directorio Excedido", "Error", true)
-        endGeneration()
-        return
+    if (getDirectorySize(folderPath.path, maxSize, ignoreFiles, allowedExtensions) == -1) {
+        showTopMsgBox("Los archivos para procesar superan los " maxSizeMB " MB y no se procederá. Para solucionar esto, seleccione un directorio más pequeño o edite en el archivo de configuración los archivos que se procesarán.", "Tamaño del Directorio Excedido", "Error", true)
+        endGeneration("Tamaño excedido, el Limite son " maxSizeMB " MB", -1)
+        return 1
     }
 
     updateGuiControlText("StatusProcess", "Generating...")
 
+
+    ;; Generar el árbol de directorios
+    errorLevel := checkAndGenerateDirectoryTree()
+    switch errorLevel {
+        case 1:
+            endGeneration("DirectoryTree -> No hay extensiones permitidas", -1)
+            return 1
+    }
+
+    ;; Generar el contenido de los archivos
+    errorLevel := checkAndGenerateFilesContents()
+    switch errorLevel {
+        case 1:
+            endGeneration("FilesContents -> No hay extensiones permitidas", -1)
+            return 1
+    }
+
+    ; ;;! Forzar salida para debug
     ; if true {
     ;     endGeneration()
     ;     return
     ; }
 
-    ;; Generar el árbol de directorios
-    if (checkAndGenerateDirectoryTree()) {
-        endGeneration()
-        return
-    }
-
-    ;; Generar el contenido de los archivos
-    if (checkAndGenerateFilesContents()) {
-        endGeneration()
-        return
-    }
-
     ;; Combinar archivos y finalizar
-    mergeFiles()
-    endGeneration()
+    errorLevel := mergeFiles()
+
+    switch errorLevel {
+        case 1:
+            showTopMsgBox("No se pudo leer dirTree.tmp.", "Error al Leer Archivo de Árbol de Directorios", "Error", true)
+            endGeneration("mergeFiles -> Lectura dirTree.tmps", -1)
+            return 1 ;; Error: Lectura dirTree.tmp
+        case 2:
+            showTopMsgBox("No se pudo leer filesContents.tmp.", "Error al Leer Archivo de Contenido de Archivos", "Error", true)
+            endGeneration("mergeFiles -> Lectura filesContents.tmp", -1)
+            return 2 ;; Error: Lectura filesContents.tmp
+        case 3:
+            showTopMsgBox("No se pudo escribir en `"" tempFiles.output "`".", "Error al Escribir Archivo de Salida", "Error", true)
+            endGeneration("mergeFiles -> Escritura en ``output``", -1)
+            return 3 ;; Error: Escritura en `output`
+        case 4:
+            showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
+            endGeneration("mergeFiles -> Al Copiar al Portapapeles", -1)
+            return 4 ;; Error: Al Copiar al Portapapeles
+    }
+
+    endGeneration("Proceso finalizado en: ", 1)
+    SoundPlay("*64",)
+    ; showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
 /**
  * * Finaliza el proceso de generación limpiando archivos temporales y estableciendo la bandera de generación.
+ * 
+ * Esta función termina el proceso de generación de archivos temporales. Puede finalizar con éxito, con error,
+ * o simplemente limpiar sin cambiar el estado de progreso. Si se proporciona un mensaje final o un estado de fin,
+ * se detendrá el temporizador del último proceso, actualizará el estado en la GUI, y mostrará el progreso final.
+ * 
+ * @param {string} finalMessage - Mensaje para mostrar al finalizar el proceso (opcional).
+ * @param {integer} endState - Estado de finalización: 0 (sin más), 1 (completado con éxito), -1 (finalizado con error) (opcional).
  */
-endGeneration() {
-    global isGenerating
-    clearTemp()
-    isGenerating := false
-    updateGuiControlText("StatusProcess", "Generate:") ;; Cambia el texto de vuelta a "Generate:"
+endGeneration(finalMessage := "", endState := 0) {
+    global isGenerating := false
+    clearTemp()  ;; Limpia los archivos temporales
+
+    ;; Restablecer el texto del control de estado en la GUI
+    updateGuiControlText("StatusProcess", "Generate:")
+
+    ;; Si se proporciona un mensaje final o un estado de finalización
+    if (finalMessage !== "") {
+        lastProcessTimer.Stop()  ;; Detiene el temporizador del último proceso
+
+        ;; Determinar el color de la barra de progreso y si hay error
+        progressColorCode := (endState == -1) ? 2 : 1  ;; Si es error (-1) color rojo, si es éxito (1) color verde
+        errorFlag := (endState == -1)  ;; Si es error, flag a true
+
+        ;; Construir el mensaje final dependiendo del estado de error
+        progressMessage := errorFlag ? finalMessage : finalMessage " " lastProcessTimer.GetElapsedTime("<s>.<ms> s")
+
+        ;; Actualizar la barra de progreso y mostrar mensaje de finalización
+        updateProgressBar(
+            100,
+            progressMessage,  ;; Mostrar mensaje con tiempo transcurrido solo si no es error
+            , ,  ;; Dejar valores predeterminados para elementos procesados y totales
+            errorFlag,
+            progressColorCode  ;; Código de color basado en el estado
+        )
+
+        lastProcessTimer.Reset()  ;; Resetea el temporizador para el siguiente uso
+    }
 }
 
 
@@ -930,8 +998,7 @@ getAnalyzeConfigFile(section, arrayName, extendAllDefault := true) {
 getAllowedExtensions(section, extendAllDefault?) {
     allowedExtensions := getAnalyzeConfigFile(section, "allowed_extensions", extendAllDefault?)
     if (allowedExtensions.Length == 0) {
-        showTopMsgBox("No se encontraron extensiones permitidas. Asegúrese de que el archivo '" confiFileTreeGen "' existe y contiene las extensiones válidas, una por línea, sin comentarios o espacios en blanco.", "No se Encontraron Extensiones Permitidas", "Error", true)
-        return 1
+        return 1 ;; Error: "No se encontraron extensiones permitidas
     }
     return allowedExtensions
 }
@@ -949,32 +1016,18 @@ getIgnoredFiles(section, extendAllDefault?) {
     newIgnoredFiles := []
     ;; Aplicar el filtro cleanPath a cada elemento de ignoredFiles
     for index, item in ignoredFiles {
-        ; Print("index: " index ", item: " item, "#")
         updateProgressBar(index * 100 / ignoredFiles.Length, "Procesando: '" item "'", index, ignoredFiles.Length)
-        ; Print(ignoredFiles, "")
-        ; Print(newIgnoredFiles, "-")
-        ; Print(newIgnoredFiles.Last, "-")
-        ; Print(newIgnoredFiles.Last.Split("\"), "-")
-        ; Print(newIgnoredFiles.Last.Split("\").Last, "-")
 
         cleanItem := normalizePath(item, mainFolderPath)
-        ; showTopMsgBox('normalizePath(  "' item '"  )', cleanItem.path)
 
         fileName := cleanItem.path.SplitPath().FileName
+        DirName := cleanItem.path.SplitPath().Dir
 
-        ; showTopMsgBox("fileName", fileName)
         if fileName.Find("*") or fileName.Find("?") or fileName.Find("[") {
-            ; showTopMsgBox("Coincidencia '*' '?' '['", item.SplitPath().FileName)
-            psCommand := "Get-ChildItem -Path '" cleanItem.path "' -Filter '" fileName "' -Recurse | Select-Object -ExpandProperty FullName"
-
+            psCommand := "Get-ChildItem -Path '" DirName "' -Recurse | Where-Object { $_.Name -like '" fileName "' } | Select-Object -ExpandProperty FullName"
             matchFiles := RunPowerShellCommand(psCommand)
 
-            ; showTopMsgBox(matchFiles.Join())
-
             newIgnoredFiles.Extend(matchFiles)
-
-            ; showTopMsgBox(newIgnoredFiles.Join())
-
             continue
         }
 
@@ -987,12 +1040,6 @@ getIgnoredFiles(section, extendAllDefault?) {
 
     ;; Se vuelven a eliminar los duplicados porque ahora se comparan con la ruta absoluta para evitar rutas relativas repetidas.
     ignoredFiles.Unique()
-    ; showTopMsgBox(ignoredFiles.Join())
-
-    ; for index, item in ignoredFiles {
-    ;     showTopMsgBox("ignoredFiles[" index "]", item)
-    ; }
-
     return ignoredFiles
 }
 
@@ -1191,7 +1238,7 @@ mergeFiles() {
             fileTree := FileRead(tempFiles.file_dirTree, "UTF-8")
             outputContent .= "### Directory Tree:`n" fileTree spacer
         } catch {
-            showTopMsgBox("No se pudo leer dirTree.tmp.", "Error al Leer Archivo de Árbol de Directorios", "Error", true)
+            return 1 ;; Error: Lectura dirTree.tmp
         }
     }
 
@@ -1201,7 +1248,7 @@ mergeFiles() {
             fileContents := FileRead(tempFiles.file_filesContents, "UTF-8")
             outputContent .= "### Files Contents:`n" fileContents
         } catch {
-            showTopMsgBox("No se pudo leer filesContents.tmp.", "Error al Leer Archivo de Contenido de Archivos", "Error", true)
+            return 2 ;; Error: Lectura filesContents.tmp
         }
     }
 
@@ -1210,22 +1257,14 @@ mergeFiles() {
         FileDelete(output)
         FileAppend(outputContent, output, "UTF-8")
     } catch {
-        showTopMsgBox("No se pudo escribir en `"" output "`".", "Error al Escribir Archivo de Salida", "Error", true)
-        return
+        return 3 ;; Error: Escritura en `output`
     }
 
     ;; Copiar el contenido final al portapapeles
     A_Clipboard := outputContent
     if !ClipWait(2) {
-        showTopMsgBox("El intento de copiar texto al portapapeles falló.", "Error al Copiar al Portapapeles", "Error", true)
-        return
+        return 4 ;; Error: Al Copiar al Portapapeles
     }
-
-    lastProcessTimer.Stop()
-    updateProgressBar(100, "Proceso Completado en: " lastProcessTimer.ElapsedTime["ms"] "ms", , , , 1)
-    ; updateProgressBar(100, "Proceso Completado en: " lastProcessTimer.GetElapsedTimeRounded("ms"), , , , 1)
-    lastProcessTimer.Reset()
-    showTopMsgBox("Información copiada al portapapeles.", "Información Copiada", "Info", true)
 }
 
 

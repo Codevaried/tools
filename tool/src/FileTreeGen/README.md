@@ -1,4 +1,4 @@
-## Índice de la Documentación de FileTreeGen v2.6
+## Índice de la Documentación de FileTreeGen v2.7
 
 - [Introducción](#introducción)
 - [Funcionalidades Principales](#funcionalidades-principales)
@@ -13,7 +13,7 @@
 
 ### Introducción
 
-**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.6**.
+**FileTreeGen** es un programa desarrollado en AutoHotkey **v2.0.18** que permite generar un árbol de archivos y los contenidos de archivos de tipos específicos dentro de una carpeta seleccionada. Proporciona una interfaz gráfica (GUI) para facilitar la selección de carpetas y la generación de la estructura de directorios y el contenido de los archivos. La versión actual del programa es la **v2.7**.
 
 ### Funcionalidades Principales
 
@@ -152,29 +152,33 @@ Para ejecutar el programa, tiene dos opciones:
 Ejemplos de archivos de prueba ubicados en la carpeta `tree_tests`:
 
 ``````````````markdown
-#### Archivo `1.txt`: 
-`````````````txt 
+#### Archivo `1.txt`:
+
+```txt
 File in the main path
-`````````````
+```
 
-#### Archivo `1\2.txt`: 
-`````````````txt 
+#### Archivo `1\2.txt`:
+
+```txt
 File in the secondary path
-`````````````
+```
 
-#### Archivo `1\a\a.txt`: 
-`````````````txt 
+#### Archivo `1\a\a.txt`:
+
+```txt
 Line 1
 Line 2
 Text Text
-`````````````
+```
 
-#### Archivo `1\d\d.js`: 
-`````````````js 
+#### Archivo `1\d\d.js`:
+
+```js
 console.log("Line 1");
 console.log("Line 2");
 // JavaScript comment
-`````````````
+```
 ``````````````
 
 Estos archivos de ejemplo permiten probar la funcionalidad del programa y verificar que el contenido y la estructura de los archivos se generan correctamente.

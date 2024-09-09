@@ -1,10 +1,11 @@
 ﻿/**
  * @file Timer.ahk
- * @version 0.2
+ * @version 0.3
  * @author Codevaried
  * @description
  * Esta clase proporciona la funcionalidad de un temporizador que permite iniciar, detener, reanudar, 
  * y resetear el tiempo transcurrido. También permite limpiar el tiempo transcurrido sin detener el temporizador.
+ * Además, proporciona la capacidad de obtener el tiempo transcurrido en un formato personalizado.
  * 
  * Funciones incluidas:
  * - Start(): Inicia el temporizador desde el estado detenido o reseteado.
@@ -12,11 +13,19 @@
  * - Resume(): Reanuda el temporizador desde donde fue detenido.
  * - Reset(): Resetea el temporizador a 0 y lo detiene.
  * - Clear(): Resetea el temporizador a 0 sin detenerlo.
+ * - GetElapsedTime(): Devuelve el tiempo transcurrido en un formato personalizado.
  * 
  * Propiedades:
- * - ElapsedTime: Propiedad que devuelve el tiempo transcurrido en milisegundos.
+ * - ElapsedTime[unit := "ms"]: Propiedad que devuelve el tiempo transcurrido en la unidad especificada.
  * - IsRunning: Propiedad que indica si el temporizador está en funcionamiento.
  * - StartTime: Propiedad que devuelve el tiempo de inicio del temporizador.
+ * 
+ * Ejemplo de uso:
+ *   myTimer := Timer()
+ *   myTimer.Start()
+ *   Sleep(3500)
+ *   elapsedFormatted := myTimer.GetElapsedTime("<m> minutos, <s> segundos, <ms> milisegundos")
+ *   MsgBox(elapsedFormatted)  ;; Muestra: "0 minutos, 3 segundos, 500 milisegundos"
  */
 
 class Timer {
@@ -74,13 +83,33 @@ class Timer {
 	;^----------------Funciones----------------^;
 
 	/**
-	 * Devuelve el tiempo transcurrido en la unidad especificada, recortando los decimales.
-	 * @param unit {String} Unidad de tiempo. Puede ser "ms" (milisegundos), "s" (segundos), "m" (minutos), o "h" (horas).
-	 * @returns {Integer} Tiempo transcurrido en la unidad especificada, sin decimales.
+	 * Devuelve el tiempo transcurrido en un formato personalizado.
+	 * @param {string} format - Cadena de formato personalizada. Los marcadores válidos son:
+	 *                          <h> para horas, <m> para minutos, <s> para segundos, <ms> para milisegundos.
+	 *                          Si no se especifica, devuelve el tiempo en el formato estándar <h>:<m>:<s>.<ms>.
+	 * @returns {string} - Tiempo transcurrido en el formato especificado.
+	 *                     Ejemplo de formato personalizado: "<m> minutos, <h> horas".
 	 */
-	GetElapsedTimeRounded(unit := "ms") {
-		elapsed := this.ElapsedTime[unit]
-		return Floor(elapsed)  ;; Devuelve el valor sin decimales
+	GetElapsedTime(format?) {
+		elapsed := this.ElapsedTime["ms"]
+
+		;; Convertir el tiempo transcurrido a horas, minutos, segundos y milisegundos
+		hours := Floor(elapsed / 3600000)
+		minutes := Floor((elapsed - (hours * 3600000)) / 60000)
+		seconds := Floor((elapsed - (hours * 3600000) - (minutes * 60000)) / 1000)
+		milliseconds := elapsed - (hours * 3600000) - (minutes * 60000) - (seconds * 1000)
+
+		;; Si el formato está vacío, devolver en formato por defecto <h>:<m>:<s>.<ms>
+		if !IsSet(format)
+			return hours ":" minutes ":" seconds "." milliseconds
+
+		;; Reemplazar los marcadores en la cadena de formato
+		format := StrReplace(format, "<h>", hours)
+		format := StrReplace(format, "<m>", minutes)
+		format := StrReplace(format, "<s>", seconds)
+		format := StrReplace(format, "<ms>", milliseconds)
+
+		return format
 	}
 
 	/**
